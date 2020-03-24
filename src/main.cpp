@@ -39,10 +39,10 @@ int main(int argc, char* argv[]) {
     Lattice<double, 2> earlyCall(N, 0.0);
     ForwardInduction<double, 2>(earlyCall, algorithm, rootval);
 
-    double euroPutPrice = BackwardInduction<double, 2>(asset, euroPut, algorithm, PutPayoff);
+    double euroPutPrice = BackwardInduction<double, 2>(euroPut, algorithm, PutPayoff);
     std::cout << "Euro Put: " << euroPutPrice << std::endl;
 
-    double euroCallPrice = BackwardInduction<double, 2>(asset, euroCall, algorithm, CallPayoff);
+    double euroCallPrice = BackwardInduction<double, 2>(euroCall, algorithm, CallPayoff);
     std::cout << "Euro Call: " << euroCallPrice << std::endl;
 
     double earlyPutPrice = BackwardInduction<double, 2>(asset, earlyPut, algorithm, PutPayoff, AmericanPutAdjuster);

@@ -68,13 +68,10 @@ namespace LatticeMechanism {
     }
 
     template<class Node, int LatticeType>
-    void ModifyBaseValue(Lattice<Node, LatticeType> &lattice,
+    void ModifyFinalValue(Lattice<Node, LatticeType> &lattice,
                             const std::function<Node (const Node& node)>& fun) {
-        
-        for (auto &Vector_i : lattice.get_tree()) {
-            for (auto &Vector_j : Vector_i) {
-                Vector_j = fun(Vector_j);
-            }
+        for (auto &i : lattice[lattice.Depth() - 1]) {
+            i = fun(i);
         }
         return;                       
     }
@@ -103,10 +100,7 @@ namespace LatticeMechanism {
     Node BackwardInduction(Lattice<Node, LatticeType> &lattice,
                             const std::function<Node (const Node& upper, const Node& lower)>& generator,
                             const std::function<Node (const Node& node)>& endCondition) {
-        auto it = lattice[lattice.Depth() - 1];
-        for (auto i = it.begin(); i != it.end(); ++i) {
-            (*i) = endCondition((*i));
-        }
+        ModifyFinalValue(lattice, endCondition);
 
         for (std::size_t i = lattice.Depth() - 2; static_cast<int>(i) >= 0; --i) {
             for (std::size_t j = 0; j < lattice[i].capacity(); ++j) {
@@ -123,29 +117,13 @@ namespace LatticeMechanism {
                             const std::function<Node (const Node& upper, const Node& lower)>& generator,
                             const std::function<Node (const Node& node)>& endCondition,
                             const std::function<void (Node &node, const Node& val)>& constraintAdjuster) {        
-        ModifyBaseValue(l2, endCondition);
+        ModifyFinalValue(l2, endCondition);
         double tmp = 0.0;
         for (std::size_t i = l2.Depth() - 2; static_cast<int> (i) >= 0; --i) {
             for (std::size_t j = 0; j < l2[i].capacity(); ++j) {
                 tmp = lattice[i][j];
                 l2[i][j] = generator(l2[i + 1][j + 1], l2[i + 1][j]);
                 constraintAdjuster(l2[i][j], tmp);
-            }
-        }
-        return l2[0][0];
-    }
-
-    template<class Node, int LatticeType>
-    Node BackwardInduction(Lattice<Node, LatticeType> &lattice,
-                            Lattice<Node, LatticeType> &l2,
-                            const std::function<Node (const Node& upper, const Node& lower)>& generator,
-                            const std::function<Node (const Node& node)>& endCondition) {        
-        ModifyBaseValue(l2, endCondition);
-        double tmp = 0.0;
-        for (std::size_t i = l2.Depth() - 2; static_cast<int> (i) >= 0; --i) {
-            for (std::size_t j = 0; j < l2[i].capacity(); ++j) {
-                tmp = lattice[i][j];
-                l2[i][j] = generator(l2[i + 1][j + 1], l2[i + 1][j]);
             }
         }
         return l2[0][0];
