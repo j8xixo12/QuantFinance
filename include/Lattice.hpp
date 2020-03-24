@@ -40,7 +40,7 @@ namespace LatticeMechanism {
                 tree.clear();
             }
 
-            const int Depth() const { return tree.capacity(); };
+            const std::size_t Depth() const { return tree.capacity(); };
             std::vector<std::vector<Node>>& get_tree() { return tree; }
 
             Lattice<Node, LatticeType>& operator= (const Lattice<Node, LatticeType>& other) {
@@ -86,11 +86,11 @@ namespace LatticeMechanism {
         lattice[0][0] = rootval;
 
         std::tuple<Node, Node> tuple;
-        int v_size = 0;
+        std::size_t v_size = 0;
 
-        for (auto i = 1; i < lattice.Depth(); ++i) {
+        for (std::size_t i = 1; i < lattice.Depth(); ++i) {
             v_size = lattice[i - 1].capacity();
-            for (auto j = 0; j < v_size; ++j) {
+            for (std::size_t j = 0; j < v_size; ++j) {
                 tuple = generator(lattice[i-1][j]);
                 lattice[i][j] = std::get<0>(tuple);
                 lattice[i][j + 1] = std::get<1>(tuple);
@@ -108,8 +108,8 @@ namespace LatticeMechanism {
             (*i) = endCondition((*i));
         }
 
-        for (int i = lattice.Depth() - 2; i >= 0; --i) {
-            for (int j = 0; j < lattice[i].capacity(); ++j) {
+        for (std::size_t i = lattice.Depth() - 2; static_cast<int>(i) >= 0; --i) {
+            for (std::size_t j = 0; j < lattice[i].capacity(); ++j) {
                 lattice[i][j] = generator(lattice[i + 1][j + 1], lattice[i + 1][j]);
             }
         }
@@ -125,8 +125,8 @@ namespace LatticeMechanism {
                             const std::function<void (Node &node, const Node& val)>& constraintAdjuster) {        
         ModifyBaseValue(l2, endCondition);
         double tmp = 0.0;
-        for (int i = l2.Depth() - 2; i >= 0; --i) {
-            for (int j = 0; j < l2[i].capacity(); ++j) {
+        for (std::size_t i = l2.Depth() - 2; static_cast<int> (i) >= 0; --i) {
+            for (std::size_t j = 0; j < l2[i].capacity(); ++j) {
                 tmp = lattice[i][j];
                 l2[i][j] = generator(l2[i + 1][j + 1], l2[i + 1][j]);
                 constraintAdjuster(l2[i][j], tmp);
@@ -142,8 +142,8 @@ namespace LatticeMechanism {
                             const std::function<Node (const Node& node)>& endCondition) {        
         ModifyBaseValue(l2, endCondition);
         double tmp = 0.0;
-        for (int i = l2.Depth() - 2; i >= 0; --i) {
-            for (int j = 0; j < l2[i].capacity(); ++j) {
+        for (std::size_t i = l2.Depth() - 2; static_cast<int> (i) >= 0; --i) {
+            for (std::size_t j = 0; j < l2[i].capacity(); ++j) {
                 tmp = lattice[i][j];
                 l2[i][j] = generator(l2[i + 1][j + 1], l2[i + 1][j]);
             }
