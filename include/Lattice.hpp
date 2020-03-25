@@ -10,13 +10,21 @@ namespace LatticeMechanism {
     template <class Node, int LatticeType>
     class Lattice {
         private:
-            std::vector<std::vector<Node>> tree;
+            mutable std::vector<std::vector<Node>> tree;
             int type;
 
         public:
             Lattice() = delete;
+            Lattice(const int& depth) {
+                tree.resize(depth + 1);
+                int num = 1;
+                for(auto& V_i : tree) {
+                    V_i.resize(num);
+                    num++;
+                }
+            }
             Lattice(const int& depth, const Node& val) {
-                tree.resize(depth);
+                tree.resize(depth + 1);
                 int num = 1;
                 for (auto& V_i : tree) {
                     V_i.reserve(num);
@@ -25,13 +33,13 @@ namespace LatticeMechanism {
                 }
             }
             Lattice(const Lattice<Node, LatticeType>& other) {
-                tree.resize(other.depth);
+                tree.resize(other.Depth());
                 int num = 1;
                 for (auto& V_i : tree) {
-                    V_i.reserve(num);
-                    V_i.assign(num, other.val);
+                    V_i.resize(num);
                     num++;
-                } 
+                }
+                std::copy(other.get_tree().begin(), other.get_tree().end(), tree.begin());
             }
             virtual ~Lattice() {
                 for (auto& V_i : tree) {
@@ -41,19 +49,19 @@ namespace LatticeMechanism {
             }
 
             const std::size_t Depth() const { return tree.capacity(); };
-            std::vector<std::vector<Node>>& get_tree() { return tree; }
+            std::vector<std::vector<Node>>& get_tree() const { return tree; }
 
             Lattice<Node, LatticeType>& operator= (const Lattice<Node, LatticeType>& other) {
-                tree.resize(other.depth);
+                tree.resize(other.Depth());
                 int num = 1;
                 for (auto& V_i : tree) {
-                    V_i.reserve(num);
-                    V_i.assign(num, other.val);
+                    V_i.resize(num);
                     num++;
-                } 
+                }
+                std::copy(other.get_tree().begin(), other.get_tree().end(), tree.begin());
             }
 
-            std::vector<Node>& operator[](const int& index) { return tree[index]; }
+            std::vector<Node>& operator[](const int& index) const { return tree[index]; }
     };
 
     template<class Node, int LatticeType>
@@ -127,6 +135,19 @@ namespace LatticeMechanism {
             }
         }
         return l2[0][0];
+    }
+
+    template<class Node, int LatticeType>
+    Lattice<std::tuple<Node, Node>, LatticeType> merge (const Lattice<Node, LatticeType>& latticeA,
+                                                        const Lattice<Node, LatticeType>& latticeB) {
+        Lattice<std::tuple<Node, Node>, LatticeType> result(latticeA.Depth());
+        
+        for(auto i = 0; i < latticeA.Depth(); ++i) {
+            for(auto j = 0; j < (latticeA[i]).capacity(); ++j) {
+                result[i][j] = std::make_tuple(latticeA[i][j], latticeB[i][j]);
+            }
+        }
+        return result;
     }
 };
 
