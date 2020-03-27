@@ -1,43 +1,74 @@
-#include "Lattice.hpp"
-#include "CRRLattice.hpp"
+#include <vector>
+#include <iostream>
+#include <cmath>
+#include <chrono>
+#include "LUTridiagonalSolver.hpp"
+#include "DoubleSweep.hpp"
 
-using namespace LatticeMechanism;
-
-int main(int argc, char* argv[]) {
-    Option opt(0.08, 0.3, 65.0, 0.25);
-
-    constexpr double rootval = 60.0;
-    constexpr int N = 3;
-    double dt = opt.T_ / N;
-
-    CRRLatticeAlgorithms algorithm(opt, dt);
-
-    Lattice<double, 2> asset(N, 0.0);
-
-    ForwardInduction<double, 2>(asset, algorithm, rootval);
-
-    // Kinds of payoff
-    double K = opt.K_;
-    auto PutPayoff = [&K] (double S)-> double {return std::max<double> (K - S, 0.0);};
-    
-    // American early exercise constraint
-    auto AmericanPutAdjuster = [&PutPayoff] (double& V, double S)->void { // e.g. early exercise
-        V = std::max<double>(V, PutPayoff(S));
-    };
-
-    Lattice<double, 2> earlyPut(N, 0.0);
-    ForwardInduction<double, 2>(earlyPut, algorithm, rootval);
-
-    double earlyPutPrice = BackwardInduction<double, 2>(asset, earlyPut, algorithm, PutPayoff, AmericanPutAdjuster);
-    std::cout << "Early Put: " << earlyPutPrice << std::endl;
-
-    Lattice<std::tuple<double, double>, 2> combinedLattice = merge(asset, earlyPut);
-    // print(combinedLattice);
-    for (std::size_t i = 0; i < combinedLattice.Depth(); ++i) {
-        for (std::size_t j = 0; j < combinedLattice[i].capacity(); ++j) {
-            std::cout << std::get<0>(combinedLattice[i][j]) << ", " << std::get<1>(combinedLattice[i][j]) << " | ";
-        }
-        std::cout << std::endl;
+double InitialCondition(double x) {
+    if (x >= 0.0 && x <= 0.5) {
+        return 2.0 * x; 
     }
-    return 0;
+    return 2.0 * (1.0 - x); 
+}
+template<typename T>
+using Vector = std::vector<T>;
+
+int main(int argc, char *argv[]) {
+    // BTCS scheme for the heat equation
+    long J = 200;
+    long N = 100;
+    long choice = 1;
+    double theta = (choice == 2) ? 0.5 : 1.0;
+    double T = 1.0;
+
+    double A = 0.0; // LHS
+    double B = 1.0; // RHS
+    double h = (B - A) / static_cast<double>(J); 
+    double k = T / static_cast<double>(N);
+    // Boundary conditions 
+    double lambda = k / (h * h);
+
+    // Constructors with size, start index and value (Diagonals of matrix) 
+    // J intervals, thus J-1 UNKNOWN internal points
+    // Dirichlet boundary conditions
+    Vector<double> a(J-1,-lambda*theta);
+    Vector<double> b(J-1,(1.0 + 2.0*lambda*theta));
+    Vector<double> c(J-1,-lambda*theta);
+    Vector<double> r(J-1, 0); // Right-hand side NOT CONSTANT ANYMORE
+                                // Boundary conditions into consideration
+    // Create mesh in space
+    Vector<double> xarr(J + 1); 
+    xarr[0] = A;
+    for (std::size_t j = 1; j < xarr.size(); ++j) {
+        xarr[j] = xarr[j - 1] + h; 
+    }
+
+    Vector<double> vecOld(xarr.size()); // At time n 
+    Vector<double> vecNew(xarr.size()); // At time n+1
+    // Initial condition
+    for (std::size_t j = 0; j < vecOld.size(); j++) {
+        vecOld[j] = InitialCondition(xarr[j]);
+    }
+    // We start at 1st time point
+    double current = k;
+
+    std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+    while (current <= T) {
+     // Update at new time level n+1
+        // Compute inhomogeneous term
+        for (std::size_t j = 1; j < r.size() - 1; ++j) {
+            r[j] = (lambda * (1.0 - theta) * vecOld[j + 1])
+            + (1.0 - (2.0 * lambda * (1.0 - theta))) * vecOld[j]
+            + (lambda * (1.0 - theta) * vecOld[j - 1]);
+        }
+        // DoubleSweep<double> mySolver(a, b, c, r, 0.0, 0.0); 
+        LUTridiagonalSolver<double> mySolver(a, b, c, r); 
+        vecNew = mySolver.solve();
+        vecOld = vecNew;
+        current += k;
+    }
+    std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+    std::cout << "Elapsed time:  " << std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count() << "us." << std::endl;
+
 }

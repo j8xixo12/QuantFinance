@@ -1,10 +1,12 @@
 #ifndef LUTRIDIAGONALSOLVER_HPP_
 #define LUTRIDIAGONALSOLVER_HPP_
 
-template<class T>
-    using Vector = std::vector<T>;
+#include <vector>
+#include <cmath>
 
-template <class T> class LUTridiagnoalSolver {
+template<class T> using Vector = std::vector<T>;
+
+template <class T> class LUTridiagonalSolver {
     private:
         // Defining arrays (input)
         // V2 optimise so to work with pointers
@@ -78,8 +80,8 @@ template <class T> class LUTridiagnoalSolver {
             if (std::abs(b[0]) < std::abs(c[0])) return false;
             if(std::abs(b[Size - 1]) < std::abs(a[Size - 1])) return false;
 
-            for (std::size_t i = i; i < Size - 1; ++i) {
-                if (std::abs(b[j]) < std::abs(a[j]) + std::abs(c[j])) return false;
+            for (std::size_t i = 1; i < Size - 1; ++i) {
+                if (std::abs(b[i]) < std::abs(a[i]) + std::abs(c[i])) return false;
             }
 
             return true;

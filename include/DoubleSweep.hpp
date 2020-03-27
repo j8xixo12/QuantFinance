@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-template<typename T, template<typename T, typename Alloc> class Container = std::vector, typename Alloc = std::allocator<T>>
+template<typename T, template<typename TT, typename Alloc> class Container = std::vector, typename Alloc = std::allocator<T>>
 
 class DoubleSweep {
     private:
