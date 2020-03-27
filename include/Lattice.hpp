@@ -142,8 +142,8 @@ namespace LatticeMechanism {
                                                         const Lattice<Node, LatticeType>& latticeB) {
         Lattice<std::tuple<Node, Node>, LatticeType> result(latticeA.Depth());
         
-        for(auto i = 0; i < latticeA.Depth(); ++i) {
-            for(auto j = 0; j < (latticeA[i]).capacity(); ++j) {
+        for(std::size_t i = 0; i < latticeA.Depth(); ++i) {
+            for(std::size_t j = 0; j < (latticeA[i]).capacity(); ++j) {
                 result[i][j] = std::make_tuple(latticeA[i][j], latticeB[i][j]);
             }
         }

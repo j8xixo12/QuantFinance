@@ -33,8 +33,8 @@ int main(int argc, char* argv[]) {
 
     Lattice<std::tuple<double, double>, 2> combinedLattice = merge(asset, earlyPut);
     // print(combinedLattice);
-    for (auto i = 0; i < combinedLattice.Depth(); ++i) {
-        for (auto j = 0; j < combinedLattice[i].capacity(); ++j) {
+    for (std::size_t i = 0; i < combinedLattice.Depth(); ++i) {
+        for (std::size_t j = 0; j < combinedLattice[i].capacity(); ++j) {
             std::cout << std::get<0>(combinedLattice[i][j]) << ", " << std::get<1>(combinedLattice[i][j]) << " | ";
         }
         std::cout << std::endl;
