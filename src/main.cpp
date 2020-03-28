@@ -16,7 +16,7 @@ using Vector = std::vector<T>;
 
 int main(int argc, char *argv[]) {
     // BTCS scheme for the heat equation
-    long J = 200;
+    long J = 20;
     long N = 100;
     long choice = 1;
     double theta = (choice == 2) ? 0.5 : 1.0;
@@ -53,17 +53,19 @@ int main(int argc, char *argv[]) {
     // We start at 1st time point
     double current = k;
 
-    std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-    while (current <= T) {
-     // Update at new time level n+1
-        // Compute inhomogeneous term
+    auto r_fun = [&vecOld, lambda, theta] (Vector<double> &r) -> void {
         for (std::size_t j = 1; j < r.size() - 1; ++j) {
             r[j] = (lambda * (1.0 - theta) * vecOld[j + 1])
             + (1.0 - (2.0 * lambda * (1.0 - theta))) * vecOld[j]
             + (lambda * (1.0 - theta) * vecOld[j - 1]);
         }
-        // DoubleSweep<double> mySolver(a, b, c, r, 0.0, 0.0); 
-        LUTridiagonalSolver<double> mySolver(a, b, c, r); 
+    };
+    
+    LUTridiagonalSolver<double> mySolver(a, b, c, r, r_fun);
+    std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+    while (current <= T) {
+     // Update at new time level n+1
+        // Compute inhomogeneous term
         vecNew = mySolver.solve();
         vecOld = vecNew;
         current += k;

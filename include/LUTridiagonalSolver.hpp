@@ -14,7 +14,8 @@ template <class T> class LUTridiagonalSolver {
         Vector<T> b; // The diagonal array [0..J] "baseline array"
         Vector<T> c; // The upper-diagonal array [0..J]
         Vector<T> r; // The right-hand side of the equation
-        
+        std::function<void (Vector<T>&)> r_eqn_; // The right-hand side of the equation
+
         // Work arrays
         Vector<T> beta;
         Vector<T> gamma;
@@ -22,7 +23,7 @@ template <class T> class LUTridiagonalSolver {
 
         std::size_t Size;
 
-        void calculateBetaGamma_ZU(Vector<T>& r) {
+        void calculateBetaGamma_ZU() {
             // eq 13.10
             beta[0] = b[0];
             gamma[0] = c[0] / beta[0];
@@ -56,7 +57,8 @@ template <class T> class LUTridiagonalSolver {
         LUTridiagonalSolver<T>& operator = (const LUTridiagonalSolver<T>& source) = delete;
 
         LUTridiagonalSolver(Vector<T>& lower, Vector<T>& diagonal,
-                            Vector<T>& upper, Vector<T>& RHS) {
+                            Vector<T>& upper, Vector<T>& RHS,
+                            const std::function<void (Vector<T>&)>& eqn_in) {
             a = lower;
             b = diagonal;
             c = upper;
@@ -67,10 +69,12 @@ template <class T> class LUTridiagonalSolver {
             beta = Vector<T>(Size);
             gamma = Vector<T>(Size);
             z = Vector<T>(Size);
+            r_eqn_ = eqn_in;
         }
 
         Vector<T> solve() {
-            calculateBetaGamma_ZU(r);
+            r_eqn_(r);
+            calculateBetaGamma_ZU();
             return r;
         }
 
