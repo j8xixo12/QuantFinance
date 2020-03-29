@@ -1,60 +1,38 @@
-#include "CubicSpline.hpp"
-#include "utility.hpp"
 #include <random>
 #include <iostream>
-
-
-double Pdf(double x) { // Probability function for Gauss fn.
-    double A = 1.0 / sqrt(2.0 * 3.14159265358979323846);
-    return A * exp(-x*x*0.5); 
-}
-double dPdfdx(double x) { // 1st derivative of probability function for Gauss fn.
-    return -x * Pdf(x); 
-}
-double d2Pdfdx2(double x) { // 2nd derivative of probability function for Gauss fn.
-    return -Pdf(x) + x*x*Pdf(x); 
-}
-double Cdf(double x) { // The approximation to the cumulative normal distribution
-// C++11
-    return 0.5* (1.0 + std::erf(x / std::sqrt(2.0))); 
-}
+#include <fstream>
+#include "utility.hpp"
+#include "SdeFactory.hpp"
+#include "Option.hpp"
+#include "FdmEuler.hpp"
+#include "FdmHeun.hpp"
 
 int main(int argc, char* argv[]) {
-    // Infinite interval, truncated to [a,b]
-    double a = -6.0;
-    double b = 6.0;
-    std::size_t n = 200000;
-    // double h = (b - a) / static_cast<double>(n);
-    std::vector<double> xarr = CreateMesh(n, a, b);
+    std::ofstream output("out.csv", std::ios::out);
 
-    auto fun = Pdf;
-    auto yarr = CreateDiscreteFunction(xarr, fun);
-    // Generate a random number in [a,b] 
-    std::default_random_engine eng; 
-    std::random_device rd; 
+    Option myOption(100.0, 10.0, 0.1, 0.9, 0.03);
+    double S0 = 20.0;
+    // B. Get the SDE
+    // Using factories
+    std::shared_ptr<Sde<double>> sde = SdeFactory<double>::GetSde (myOption, S0, CEV);
+
+    // C. Set up the FDM classes; 1 to N relationship between SDE and FDM 
+    std::default_random_engine eng;
+    std::normal_distribution<double> nor(0.0, 1.0); 
+    std::random_device rd;
     eng.seed(rd());
-    std::uniform_real_distribution<double> dist(a, b);
-    double xvar = dist(eng);
 
-    CubicSplineInterpolator csi(xarr, yarr, SecondDeriv);
-    try {
-        double result = csi.Solve(xvar);
-        std::cout << "Interpolated value at " << xvar << " " << std::setprecision(16) << result << ", is " << fun (xvar) << std::endl;
-        std::cout << "Integral: " << csi.Integral() << std::endl; 
-    } catch (std::exception& e) { // Catch not in range values
-        std::cout << e.what() << std::endl; 
+    FdmEuler<double> fdm(sde, nor, eng);
+    FdmHeun<double> fdm2(sde, nor, eng);
+    // D. Joining up SDE and FDM in Mediator class 
+    long NT = 200000;
+    // auto vec = Path(*sde, fdm, NT);
+    auto vec2 = Path(*sde, fdm2, NT);
+
+    for (std::size_t i = 0; i < vec2.size(); ++i) {
+        output << vec2[i] << std::endl;
     }
-
-    // Numerical Differentiation
-    auto derivs = csi.ExtendedSolve(xvar);
-    std::cout << "Derivatives, approx: " << std::get<0>(derivs) << ", "
-    << std::get<1>(derivs) << ", "<< std::get<2>(derivs) << std::endl;
-    std::cout << "Derivatives, exact: " << Pdf(xvar) << ", "
-    << dPdfdx(xvar) << ", " << d2Pdfdx2(xvar) << std::endl;
-    // 1st derivative
-    xvar = dist(eng);
-    std::cout << "1st derivative: " << xvar << ", " << dPdfdx(xvar)
-    << ", " << csi.Derivative(xvar) << std::endl;
+    output.close();
 
     return 0;
 }

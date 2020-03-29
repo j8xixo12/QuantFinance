@@ -6,16 +6,21 @@ class Option {
 	public:
 		Option() : r_(0.0), sig_(0.0), K_(0.0), T_(0.0), S_(0.0), b_(0.0) {};
 		explicit Option(const double r, const double sig, const double K,
-						const double T_)
-						: r_(r), sig_(sig), K_(K), T_(T_) {};
+						const double T)
+						: r_(r), sig_(sig), K_(K), T_(T) {};
+		
+		explicit Option(const double K, const double T, const double r, const double sig,
+						const double D)
+						: r_(r), sig_(sig), K_(K), T_(T), D_(D) {};
 
 		double r_;		// Interest rate
-		double sig_;		// Volatility
+		double sig_;	// Volatility
 		double K_;		// Strike price
 		double T_;		// Expiry date
 		double S_;		// Current underlying price (e.g. stock, forward)
 		double b_;		// Cost of carry
 		double q_;
+		double D_;
 };
 
 class PerpetualOption : public Option {
