@@ -1,5 +1,6 @@
 #ifndef SDE_HPP_
 #define SDE_HPP_
+#include <functional>
 
 // Functions of arity 2 (two input arguments)
 template <typename T> using FunctionType = std::function<T (const T& arg1, const T& arg2)>;

@@ -2,6 +2,7 @@
 #define FDM_HPP_
 
 #include <random>
+#include <memory>
 #include "Sde.hpp"
 
 template<class Derived, typename T> class Fdm {
