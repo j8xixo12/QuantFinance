@@ -2,6 +2,7 @@
 #define UTILITY_HPP_
 
 #include <vector>
+#include <cmath>
 #include "Sde.hpp"
 #include "Fdm.hpp"
 
@@ -42,6 +43,12 @@ std::vector<T> Path(const Sde<T>& sde,
         tn += dt; 
     }
     return result;
+}
+
+
+double N(double x) { 
+    // aka CdfN(x)
+    return 0.5 * std::erfc(-x / std::sqrt(2.0));
 }
 
 #endif // UTILITY_HPP_
