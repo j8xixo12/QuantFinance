@@ -73,4 +73,33 @@ class CallGamma final : public OptionCommand {
         }   
 };
 
+class CallVega final : public OptionCommand {
+    public:
+        explicit CallVega(double strike, double expiration, double riskFree,
+                        double costOfCarry, double volatility)
+        : OptionCommand(strike, expiration, riskFree, costOfCarry,
+        volatility) {}
+
+        virtual void execute(double S) override {
+            double tmp = sig_ * std::sqrt(T_);
+            double d1 = (std::log(S / K_) + (b_ + (sig_ * sig_) * 0.5) * T_) / tmp;
+            std::cout << "Call Vega: " << S * std::sqrt(T_) * std::exp((b_ - r_) * T_) * N(d1) << std::endl;
+        }   
+};
+
+class CallTheta final : public OptionCommand {
+    public:
+        explicit CallTheta(double strike, double expiration, double riskFree,
+                        double costOfCarry, double volatility)
+        : OptionCommand(strike, expiration, riskFree, costOfCarry,
+        volatility) {}
+
+        virtual void execute(double S) override {
+            double d1 = (std::log(S / K_) + (b_ + (sig_ * sig_) * 0.5) * T_) / (sig_ * std::sqrt(T_));
+            double d2 = d1 - sig_ * std::sqrt(T_);
+            std::cout << "Call Theta: " << -((S * sig_ * std::exp(std::pow((b_ - r_), T_) * N(d1))) / (2. * std::sqrt(T_)))
+            - (b_ - r_) * S * std::exp((b_ - r_) * T_) * N(d1) - r_ * K_ * std::exp(-r_ * T_) * N(d2) << std::endl;
+        }   
+};
+
 #endif // OPTION_COMMAND_HPP_
