@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <cmath>
+#include <random>
 #include "Sde.hpp"
 #include "Fdm.hpp"
 
@@ -49,6 +50,14 @@ std::vector<T> Path(const Sde<T>& sde,
 double N(double x) { 
     // aka CdfN(x)
     return 0.5 * std::erfc(-x / std::sqrt(2.0));
+}
+
+template <typename T>  T generateRN(T a, T b) { // Generate a uniform random number in interval [a,b]
+    std::default_random_engine eng; 
+    std::random_device rd; 
+    eng.seed(rd());
+    std::uniform_real_distribution<T> uniformVar(a, b);
+    return uniformVar(eng);
 }
 
 #endif // UTILITY_HPP_
