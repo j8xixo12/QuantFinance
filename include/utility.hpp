@@ -30,6 +30,19 @@ std::vector<double> CreateMesh(std::size_t n, double a, double b) { // Create a 
     return x;
 }
 
+std::vector<double> CreateRefinedMesh(const std::vector<double> &mesh) {
+    std::size_t n = 2 * mesh.size();
+    std::vector<double> x(n + 1);
+    x[0] = mesh[0];
+    x[n] = mesh[mesh.size() - 1];
+    double h = (mesh[mesh.size() - 1] - mesh[0]) / static_cast<double>(n);
+    for (std::size_t i = 1; i < x.size() -1; ++i) {
+        x[i] = x[i - 1] + h;
+    }
+
+    return x;
+}
+
 // Creating a path of an SDE approximated by FDM
 template <class Derived, typename T = double>
 std::vector<T> Path(const Sde<T>& sde,

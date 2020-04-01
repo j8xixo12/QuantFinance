@@ -21,7 +21,11 @@ int main(int argc, char* argv[]) {
     BVNFunction<value_type> bvn(rho); 
     GoursatFdm<value_type> fdm(AL, BL, bvn, xarr, yarr);
     // Compute a value
-    std::cout << "Value: " << std::setprecision(16) << fdm(a, b) << '\n';
+    std::cout << "Value: " << std::setprecision(16) << fdm(a, b) << std::endl;
+
+    // Extrapolation
+    GoursatFdmExtrapolation<value_type> fdm2(AL, BL, bvn, NX, NY);
+    std::cout << "Value2: " << std::setprecision(12) << fdm2(a, b) << std::endl;
 
     return 0;
 }

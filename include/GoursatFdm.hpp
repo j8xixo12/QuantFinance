@@ -4,6 +4,7 @@
 #include <functional>
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/math/constants/constants.hpp>
+#include "utility.hpp"
 
 template <typename T>
 using Function = std::function<T (const T& arg1, const T& arg2)>;
@@ -35,6 +36,34 @@ class GoursatFdm {
                 } 
             }
             return Values(Values.size1() - 1, Values.size2() - 1); 
+        }
+};
+
+template<class T>
+class GoursatFdmExtrapolation {
+    private:
+        T AL;
+        T BL; // left/lower boundaries
+        Function<T> fun;
+        std::size_t N1;
+        std::size_t N2;
+
+    public:
+        GoursatFdmExtrapolation(T xLower, T yLower,
+        const Function<T>& function,
+        std::size_t NX, std::size_t NY)
+        : AL(xLower), BL(yLower), fun(function),N1(NX), N2(NY) {}
+
+        T operator () (T x, T y) const {
+            std::vector<T> xarr = CreateMesh(N1, AL, x);
+            std::vector<T> yarr = CreateMesh(N2, BL, y);
+            std::vector<T> xarr2 = CreateRefinedMesh(xarr);
+            std::vector<T> yarr2 = CreateRefinedMesh(yarr);
+            GoursatFdm<T> fdm(AL, BL, fun, xarr, yarr);
+            GoursatFdm<T> fdm2(AL, BL, fun, xarr2, yarr2);
+            double v1 = fdm(x,y);
+            double v2 = fdm2(x,y);
+            return (4.0*v2 - v1) / 3.0;
         }
 };
 
