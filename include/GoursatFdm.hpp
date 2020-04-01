@@ -80,4 +80,20 @@ class BVNFunction {
         };
 };
 
+class BVT {
+    private:
+        double nu_;
+        double rho_;
+    public:
+        BVT(int dof, double correlation)
+        : nu_(static_cast<double>(dof)), rho_(correlation) {}
+        // Call the probability function
+        double operator () (double x, double y) {
+            double z = x * x - 2.0 * rho_ * x * y + y * y;
+            double d = 1.0 / (2.0 * (1.0 - rho_ * rho_) * nu_);
+            double factor = 1.0 / (2.0 * boost::math::constants::pi<double>() * std::sqrt(1.0 - rho_ * rho_));
+            return factor * std::pow(1.0 + d * z, -(nu_ + 2) / 2);
+        }
+};
+
 #endif // GOURSATFDM_HPP_
