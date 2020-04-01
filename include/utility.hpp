@@ -75,12 +75,12 @@ template <typename T>  T generateRN(T a, T b) { // Generate a uniform random num
 }
 
 // Normal variates etc.
-double Pdf(double x) {
+double Pdf(const double x) {
     const double A = 1.0 / std::sqrt(2.0 * boost::math::constants::pi<double>());
     return A * std::exp(-x * x * 0.5);
 }
 // C++11 supports the error function
-double Cdf(double x) { // The approximation to the cumulative normal distribution
+double Cdf(const double x) { // The approximation to the cumulative normal distribution
     return (0.5 * (1.0 - std::erf(-x / std::sqrt(2.0))));
 }
 
@@ -134,34 +134,6 @@ double BivariateNormalGaussLegendre(double a, double b, double rho,
         res += w[i + 3] * Pdf(xl) * Cdf(wl);
     }
     return alpha*res;
-}
-
-double BivariateNormal(double a, double b, double rho,
-                        double ALower, long NX) { // 26.3.3 Abramowitz and Stegun
-    double res = 0.0;
-    double hx = (a - ALower) / NX;
-    const double fac = 1.0 / std::sqrt(1 - rho*rho);
-    double s = ALower + (0.5 * hx);
-    // double hx2 = hx / 2;
-    double x = s;
-    double w;
-    for (long n = 0; n < NX; n += 1) {
-        w = fac * (b - rho * (x));
-        res += hx * Pdf(x) * Cdf(w);
-        x += hx;
-    }
-    return res;
-}
-
-double BivariateNormalExtrapolate(double a, double b, double rho,
-                                    double ALower, long NX) { // 26.3.3 Abramowitz and Stegun
-    // Repeated Richardson extrapolation
-    double uh = BivariateNormal(a, b, rho, ALower, NX);
-    double uh2 = BivariateNormal(a, b, rho, ALower, 2 * NX);
-    auto vh = (4 * uh2 - uh) / 3.0;
-    double uh4 = BivariateNormal(a, b, rho, ALower, 4 * NX);
-    auto vh2 = (4 * uh4 - uh2) / 3.0;
-    return (16 * vh2 - vh) / 15;
 }
 
 #endif // UTILITY_HPP_
