@@ -52,7 +52,7 @@ class GoursatFdmExtrapolation {
         GoursatFdmExtrapolation(T xLower, T yLower,
         const Function<T>& function,
         std::size_t NX, std::size_t NY)
-        : AL(xLower), BL(yLower), fun(function),N1(NX), N2(NY) {}
+        : AL(xLower), BL(yLower), fun(function), N1(NX), N2(NY) {}
 
         T operator () (T x, T y) const {
             std::vector<T> xarr = CreateMesh(N1, AL, x);
@@ -61,9 +61,9 @@ class GoursatFdmExtrapolation {
             std::vector<T> yarr2 = CreateRefinedMesh(yarr);
             GoursatFdm<T> fdm(AL, BL, fun, xarr, yarr);
             GoursatFdm<T> fdm2(AL, BL, fun, xarr2, yarr2);
-            double v1 = fdm(x,y);
-            double v2 = fdm2(x,y);
-            return (4.0*v2 - v1) / 3.0;
+            double v1 = fdm(x, y);
+            double v2 = fdm2(x, y);
+            return (4.0 * v2 - v1) / 3.0;
         }
 };
 
