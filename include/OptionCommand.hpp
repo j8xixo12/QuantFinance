@@ -17,12 +17,12 @@ class OptionCommand : protected Option {
         OptionCommand(const OptionCommand& c) = delete;
         OptionCommand& operator = (const OptionCommand& c) = delete;
         // The abstract interface
-        virtual void execute(double S) = 0;
+        virtual double execute(double S) = 0;
         // Implement as function object; example of Template Method Pattern
-        virtual void operator () (double S)
+        virtual double operator () (double S)
         {
             // Call derived class' execute()
-            execute(S);
+            return execute(S);
         }
 
         virtual ~OptionCommand() {};
@@ -35,13 +35,13 @@ class CallPrice final : public OptionCommand {
             : OptionCommand(strike, expiration, riskFree, costOfCarry,
             volatility) {}
 
-        virtual void execute(double S) override {
+        virtual double execute(double S) override {
             double tmp = sig_ * std::sqrt(T_);
             double d1 = (std::log(S / K_) + (b_ + (sig_ * sig_) * 0.5) * T_) / tmp; 
             double d2 = d1 - tmp;
-            std::cout << "Call Price: " <<
-            (S * std::exp((b_ - r_) * T_) * N(d1)) - (K_ * std::
-            exp(-r_ * T_) * N(d2)) << std::endl;
+            
+            return (S * std::exp((b_ - r_) * T_) * N(d1)) - (K_ * std::
+            exp(-r_ * T_) * N(d2));
         } 
 };
 
@@ -52,10 +52,10 @@ class CallDelta final : public OptionCommand {
             : OptionCommand(strike, expiration, riskFree, costOfCarry,
             volatility) {}
 
-        virtual void execute(double S)  override {
+        virtual double execute(double S)  override {
             double tmp = sig_ * std::sqrt(T_);
             double d1 = (std::log(S / K_) + (b_ + (sig_ * sig_) * 0.5) * T_) / tmp;
-            std::cout << "Call delta: " << std::exp((b_ - r_) * T_) * N(d1) << std::endl; 
+            return std::exp((b_ - r_) * T_) * N(d1); 
         }
 };
 
@@ -66,10 +66,10 @@ class CallGamma final : public OptionCommand {
         : OptionCommand(strike, expiration, riskFree, costOfCarry,
         volatility) {}
 
-        virtual void execute(double S) override {
+        virtual double execute(double S) override {
             double tmp = sig_ * std::sqrt(T_);
             double d1 = (std::log(S / K_) + (b_ + (sig_ * sig_) * 0.5) * T_) / tmp;
-            std::cout << "Call Gamma: " << N(d1) * std::exp((b_ - r_) * T_) / (S * tmp) << std::endl;
+            return N(d1) * std::exp((b_ - r_) * T_) / (S * tmp);
         }   
 };
 
@@ -80,10 +80,10 @@ class CallVega final : public OptionCommand {
         : OptionCommand(strike, expiration, riskFree, costOfCarry,
         volatility) {}
 
-        virtual void execute(double S) override {
+        virtual double execute(double S) override {
             double tmp = sig_ * std::sqrt(T_);
             double d1 = (std::log(S / K_) + (b_ + (sig_ * sig_) * 0.5) * T_) / tmp;
-            std::cout << "Call Vega: " << S * std::sqrt(T_) * std::exp((b_ - r_) * T_) * N(d1) << std::endl;
+            return S * std::sqrt(T_) * std::exp((b_ - r_) * T_) * N(d1);
         }   
 };
 
@@ -94,11 +94,11 @@ class CallTheta final : public OptionCommand {
         : OptionCommand(strike, expiration, riskFree, costOfCarry,
         volatility) {}
 
-        virtual void execute(double S) override {
+        virtual double execute(double S) override {
             double d1 = (std::log(S / K_) + (b_ + (sig_ * sig_) * 0.5) * T_) / (sig_ * std::sqrt(T_));
             double d2 = d1 - sig_ * std::sqrt(T_);
-            std::cout << "Call Theta: " << -((S * sig_ * std::exp(std::pow((b_ - r_), T_) * N(d1))) / (2. * std::sqrt(T_)))
-            - (b_ - r_) * S * std::exp((b_ - r_) * T_) * N(d1) - r_ * K_ * std::exp(-r_ * T_) * N(d2) << std::endl;
+            return -((S * sig_ * std::exp(std::pow((b_ - r_), T_) * N(d1))) / (2. * std::sqrt(T_)))
+            - (b_ - r_) * S * std::exp((b_ - r_) * T_) * N(d1) - r_ * K_ * std::exp(-r_ * T_) * N(d2);
         }   
 };
 

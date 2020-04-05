@@ -4,10 +4,9 @@
 #include <vector>
 #include <cmath>
 
-template<class T> using Vector = std::vector<T>;
-
 template <class T> class LUTridiagonalSolver {
     private:
+        template<class TT> using Vector = std::vector<TT>;
         // Defining arrays (input)
         // V2 optimise so to work with pointers
         Vector<T> a; // The lower-diagonal array [0..J]

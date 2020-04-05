@@ -5,8 +5,6 @@
 #include "Range.hpp"
 #include "DoubleSweep.hpp"
 
-using Vector = std::vector<double>;
-
 class IBvpImp {
     // Abstract base class modelling the implementation objects in the
     // Bridge pattern. Derived classes (e.g. BS, CEV, CIR) must implement 
@@ -59,93 +57,94 @@ class IBvp {
 };
 
 class IBvpSolver {
-  private:
-      // Utility functions
-      void initMesh(long NSteps, long JSteps) {
-          N = NSteps;
-          J = JSteps;
-          T = ibvp->trange().spread();
-          k = T / static_cast<double>(N);
-          h = ibvp ->xrange().spread() / static_cast<double>(J); 
-          h2 = h * h;
-          // Other numbers
-          DN = static_cast<double>(N);
-          DJ = static_cast<double>(J);
-          DJJ = static_cast<double>(J * J);
-          xarr = ibvp->xrange().mesh(J);
-          // Array in t direction
-          tarr = ibvp->trange().mesh(N); 
-          tIndex = 0;
-          vecOld = Vector(xarr.size(), 0.0); 
-          vecNew = Vector(xarr.size(), 0.0);
-      }
-      void initIC() {
-          // Utility function to initialise the payoff function
-          // Initialise at the boundaries
-          vecOld[0] = ibvp->Bcl(ibvp->trange().Low());
-          vecOld[vecOld.size()-1] = ibvp->Bcr(ibvp->trange().High());
-          // Initialise values in interior of interval using // the initial function 'IC' from the PDE
-          for( std::size_t j = 1; j < xarr.size() - 1; ++j) {
-            vecOld[ j ] = ibvp->Ic(xarr[j]); 
-          }
-      }
-  protected:
-      IBvp* ibvp;
-      long N;
-      double k;
-      long J;
-      double h, h2;
-      double DN;
-      double DJ;
-      double DJJ;
-      // Pointer to 'server'
-      // The number of subdivisions of interval in IBVP
-      // Step length; redundant data but is efficient
-      // The number of subdivisions of interval in IBVP
-      // Step length; redundant data but is efficient
-      double tprev, tnow, T;
-      long currentIndex, maxIndex, tIndex;
-  public:
-      Vector xarr; // Useful work array
-      Vector tarr; // Useful work array
-      // Other data
-      long n;  // Current counter
-      Vector vecOld;
-      Vector vecNew;
+    private:
+        // Utility functions
+        void initMesh(long NSteps, long JSteps) {
+            N = NSteps;
+            J = JSteps;
+            T = ibvp->trange().spread();
+            k = T / static_cast<double>(N);
+            h = ibvp ->xrange().spread() / static_cast<double>(J); 
+            h2 = h * h;
+            // Other numbers
+            DN = static_cast<double>(N);
+            DJ = static_cast<double>(J);
+            DJJ = static_cast<double>(J * J);
+            xarr = ibvp->xrange().mesh(J);
+            // Array in t direction
+            tarr = ibvp->trange().mesh(N); 
+            tIndex = 0;
+            vecOld = Vector(xarr.size(), 0.0); 
+            vecNew = Vector(xarr.size(), 0.0);
+        }
+        void initIC() {
+            // Utility function to initialise the payoff function
+            // Initialise at the boundaries
+            vecOld[0] = ibvp->Bcl(ibvp->trange().Low());
+            vecOld[vecOld.size()-1] = ibvp->Bcr(ibvp->trange().High());
+            // Initialise values in interior of interval using // the initial function 'IC' from the PDE
+            for( std::size_t j = 1; j < xarr.size() - 1; ++j) {
+                vecOld[ j ] = ibvp->Ic(xarr[j]); 
+            }
+        }
+    protected:
+        IBvp* ibvp;
+        long N;
+        double k;
+        long J;
+        double h, h2;
+        double DN;
+        double DJ;
+        double DJJ;
+        // Pointer to 'server'
+        // The number of subdivisions of interval in IBVP
+        // Step length; redundant data but is efficient
+        // The number of subdivisions of interval in IBVP
+        // Step length; redundant data but is efficient
+        double tprev, tnow, T;
+        long currentIndex, maxIndex, tIndex;
+    public:
+        using Vector = std::vector<double>;
+        Vector xarr; // Useful work array
+        Vector tarr; // Useful work array
+        // Other data
+        long n;  // Current counter
+        Vector vecOld;
+        Vector vecNew;
 
-      IBvpSolver(const IBvpSolver& source) = delete;
-      IBvpSolver& operator = (const IBvpSolver& source) = delete;
-      IBvpSolver() {}
-      IBvpSolver(IBvp& source, long NSteps, long JSteps) {
-          ibvp = &source;
-          // Create a mesh
-          initMesh(NSteps, JSteps);
-          // Initialise from the payoff function
-          initIC();
-      } 
-      virtual ~IBvpSolver() {}
-      virtual Vector& result() {
-          // Initialise time.
-          // The state machine, really; we march from t = 0 to t = T. 
-          for(std::size_t n = 1; n < tarr.size(); ++n) {
-              tnow = tarr[n];
-              // The two methods that represent the variant parts // of the Template Method Pattern.
-              calculate();
-              tprev = tnow;
-              for (std::size_t j = 0; j < vecNew.size(); ++j) { // Combine in previous loop
-                  vecOld[j] = vecNew[j];
-              }
-          }
-          return vecNew;
-      }
-      const Vector& XValues() const { return xarr; }
-      const Vector& TValues() const { return tarr; }
-      // The result of the calculation
-            // Array of x values
-            // Array of time values
-      // Hook functions for Template Method pattern
-      virtual void calculate() = 0; // Tells how to calculate sol.
-      // at n+1
+        IBvpSolver(const IBvpSolver& source) = delete;
+        IBvpSolver& operator = (const IBvpSolver& source) = delete;
+        IBvpSolver() {}
+        IBvpSolver(IBvp& source, long NSteps, long JSteps) {
+            ibvp = &source;
+            // Create a mesh
+            initMesh(NSteps, JSteps);
+            // Initialise from the payoff function
+            initIC();
+        } 
+        virtual ~IBvpSolver() {}
+        virtual Vector& result() {
+            // Initialise time.
+            // The state machine, really; we march from t = 0 to t = T. 
+            for(std::size_t n = 1; n < tarr.size(); ++n) {
+                tnow = tarr[n];
+                // The two methods that represent the variant parts // of the Template Method Pattern.
+                calculate();
+                tprev = tnow;
+                for (std::size_t j = 0; j < vecNew.size(); ++j) { // Combine in previous loop
+                    vecOld[j] = vecNew[j];
+                }
+            }
+            return vecNew;
+        }
+        const Vector& XValues() const { return xarr; }
+        const Vector& TValues() const { return tarr; }
+        // The result of the calculation
+                // Array of x values
+                // Array of time values
+        // Hook functions for Template Method pattern
+        virtual void calculate() = 0; // Tells how to calculate sol.
+        // at n+1
 };
 
 class CNIBVP : public IBvpSolver {
