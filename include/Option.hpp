@@ -2,9 +2,15 @@
 #define Option_hpp_
 #include <cmath>
 
+enum OptionType {
+	Call,
+	Put
+};
+
 class Option {
 	public:
-		Option() : r_(0.0), sig_(0.0), K_(0.0), T_(0.0), S_(0.0), b_(0.0), q_(0.0), D_(0.0) {};
+		Option() : r_(0.0), sig_(0.0), K_(0.0), T_(0.0), S_(0.0), b_(0.0), q_(0.0), D_(0.0),
+					beta_(0.0), SMax_(0.0) {};
 		explicit Option(const double r, const double sig, const double K,
 						const double T)
 						: r_(r), sig_(sig), K_(K), T_(T) {};
@@ -12,6 +18,8 @@ class Option {
 		explicit Option(const double K, const double T, const double r, const double sig,
 						const double b)
 						: r_(r), sig_(sig), K_(K), T_(T), b_(b) {};
+		Option(const Option &other) : r_(other.r_), sig_(other.sig_), K_(other.K_), T_(other.T_), b_(other.b_),
+								q_(other.q_), D_(other.D_), beta_(other.beta_), SMax_(other.SMax_), type(other.type) {}
 
 		double r_;		// Interest rate
 		double sig_;	// Volatility
@@ -21,6 +29,9 @@ class Option {
 		double b_;		// Cost of carry
 		double q_;
 		double D_;
+		double beta_;    // elasticity factor
+		double SMax_;     // Far field condition
+		OptionType type;
 };
 
 class PerpetualOption : public Option {

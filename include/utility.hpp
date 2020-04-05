@@ -7,6 +7,7 @@
 #include <boost/math/constants/constants.hpp>
 #include "Sde.hpp"
 #include "Fdm.hpp"
+#include "IBvp.hpp"
 
 std::vector<double> CreateDiscreteFunction(const std::vector<double>& xarr,
                                 const std::function<double (double)>& fun) {
@@ -84,4 +85,7 @@ double Cdf(const double x) { // The approximation to the cumulative normal distr
     return (0.5 * (1.0 - std::erf(-x / std::sqrt(2.0))));
 }
 
+std::vector<double> OptionPrice(IBvpSolver& fdm) { // Compute option price using a FD scheme
+    return fdm.result();
+}
 #endif // UTILITY_HPP_
