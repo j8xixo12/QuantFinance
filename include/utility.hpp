@@ -67,6 +67,11 @@ double N(double x) {
     return 0.5 * std::erfc(-x / std::sqrt(2.0));
 }
 
+double n(double x) {
+    // aka pdf(x)
+    return std::exp((-x * x) / 2.) / std::sqrt(2.0 * boost::math::constants::pi<double>());
+}
+
 template <typename T>  T generateRN(T a, T b) { // Generate a uniform random number in interval [a,b]
     std::default_random_engine eng; 
     std::random_device rd; 

@@ -69,7 +69,7 @@ class CallGamma final : public OptionCommand {
         virtual double execute(double S) override {
             double tmp = sig_ * std::sqrt(T_);
             double d1 = (std::log(S / K_) + (b_ + (sig_ * sig_) * 0.5) * T_) / tmp;
-            return N(d1) * std::exp((b_ - r_) * T_) / (S * tmp);
+            return n(d1) * std::exp((b_ - r_) * T_) / (S * tmp);
         }   
 };
 
@@ -83,7 +83,7 @@ class CallVega final : public OptionCommand {
         virtual double execute(double S) override {
             double tmp = sig_ * std::sqrt(T_);
             double d1 = (std::log(S / K_) + (b_ + (sig_ * sig_) * 0.5) * T_) / tmp;
-            return S * std::sqrt(T_) * std::exp((b_ - r_) * T_) * N(d1);
+            return S * std::sqrt(T_) * std::exp((b_ - r_) * T_) * n(d1);
         }   
 };
 
@@ -97,7 +97,7 @@ class CallTheta final : public OptionCommand {
         virtual double execute(double S) override {
             double d1 = (std::log(S / K_) + (b_ + (sig_ * sig_) * 0.5) * T_) / (sig_ * std::sqrt(T_));
             double d2 = d1 - sig_ * std::sqrt(T_);
-            return -((S * sig_ * std::exp(std::pow((b_ - r_), T_) * N(d1))) / (2. * std::sqrt(T_)))
+            return -((S * sig_ * std::exp(std::pow((b_ - r_), T_) * n(d1))) / (2. * std::sqrt(T_)))
             - (b_ - r_) * S * std::exp((b_ - r_) * T_) * N(d1) - r_ * K_ * std::exp(-r_ * T_) * N(d2);
         }   
 };
