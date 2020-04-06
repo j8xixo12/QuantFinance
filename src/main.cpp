@@ -25,7 +25,7 @@ int main(int argc, char* argv[]) {
     Range<double> rangeT(0.0, myOption.T_);
     IBvp currentImp(myImp, rangeX, rangeT);
 
-    long J = 5000;
+    long J = 500;
     long N = 500;
     std::cout << "Number of space divisions: ";
     std::cout << J << std::endl;
@@ -88,6 +88,7 @@ int main(int argc, char* argv[]) {
     for (size_t j = 0; j < zarr.size(); ++j) {
         output << j << '\t' << cDeltaPrices[j] << '\t' << delta[j] << '\t' << splineDelta[j]
                     << '\t' << cGammaPrices[j] << '\t' << gamma[j] << '\t' << splineGamma[j]
+                    << '\t' << sol[j]
                     << std::endl;
     }
 
