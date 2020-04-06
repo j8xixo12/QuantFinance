@@ -37,7 +37,7 @@ class CubicSplineInterpolator {
                 r[r.size() - 1] = 6.0 * (b - ((y[N] - y[N-1]) / h[N])) / h[N]; 
             }
             double tmp;
-            for (long j = 1; j < x.size() - 1; ++j) {
+            for (std::size_t j = 1; j < x.size() - 1; ++j) {
                 double fac = 1.0 / (h[j] + h[j + 1]); 
                 C[j] = h[j + 1] * fac;
                 A[j] = h[j] * fac;
