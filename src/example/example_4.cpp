@@ -32,7 +32,8 @@ int main(int argc, char* argv[]) {
     // Take the boundary conditions into consideration 
     r2[0] -= BCL;
     r2[r2.size()-1] -= BCR;
-    LUTridiagonalSolver<double> mySolver2(a2, b2, c2, r2); 
+    auto RHS_eqn = [](Vector &V) { return; };
+    LUTridiagonalSolver<double> mySolver2(a2, b2, c2, r2, RHS_eqn); 
     std::cout << "Matrix has a solution? " << mySolver2.diagonalDominant() << '\n'; 
     
     DoubleSweep<value_type> mySolver(a, b, c, r, BCL, BCR);

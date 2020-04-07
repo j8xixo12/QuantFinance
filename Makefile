@@ -25,6 +25,9 @@ $(OUT)/%.o: $(SRC)/%.cpp
 $(EXEC): $(OUT) $(OBJS)
 	$(CXX) $(OBJS) $(LDFLAGS) -o $@ 
 
+example: 
+	cd src/example && $(MAKE) all
+	cd src/example && $(MAKE) all
 
 run: $(EXEC)
 	./$(EXEC)
@@ -37,3 +40,4 @@ clean:
 distclean: clean
 	$(RM) -rf build
 	$(RM) $(EXEC)
+	cd src/example && $(MAKE) distclean
