@@ -4,11 +4,12 @@
 #include <list>
 #include "OptionCommand.hpp"
 
-using CompositeCommandData = std::list<std::shared_ptr<OptionCommand>>;
+using CompositeCommandData = std::vector<std::shared_ptr<OptionCommand>>;
 
 class CompositeCommand : public OptionCommand {
     private:
         CompositeCommandData data;
+        std::vector<double> v_data;
     public:
         CompositeCommand() : data(CompositeCommandData()) {}
 
@@ -20,10 +21,11 @@ class CompositeCommand : public OptionCommand {
             return data.size(); 
         }
 
-        void execute(double S) override { // Iterate over each element of the composite and call 
+        double execute(double S) override { // Iterate over each element of the composite and call 
             // its execute()
-            for (auto it = data.begin(); it != data.end(); ++it) {
-                (*it)->execute(S); // nested pointer 
+            v_data.resize(data.size());
+            for (auto i = 0; i < data.size(); ++i) {
+                v_data[i] = data[i]->execute(S); // nested pointer 
             }
         }
 };

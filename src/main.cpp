@@ -1,97 +1,62 @@
 #include <iostream>
-#include <fstream>
-#include "IBvp.hpp"
-#include "Option.hpp"
-#include "BlackScholes.hpp"
-#include "Range.hpp"
-#include "utility.hpp"
-#include "OptionCommand.hpp"
-#include "CubicSpline.hpp"
+#include <functional>
+#include "TwoFactorPDE.hpp"
+
+void CreateAnchorPdeDomain(TwoFactorPdeDomain<double>& pdeDomain,
+                AnchorPde &pde,
+                double xMax, double yMax, double T,
+                const std::function<double(double, double)>& IC) {
+    pdeDomain.rx = Range<double>(0.0, xMax);
+    pdeDomain.ry = Range<double>(0.0, yMax);
+    pdeDomain.rt = Range<double>(0.0, T);
+    pdeDomain.LeftBC = std::bind(&AnchorPde::BCLeft, &pde, std::placeholders::_1, std::placeholders::_2); 
+    pdeDomain.RightBC = std::bind(&AnchorPde::BCRight, &pde, std::placeholders::_1, std::placeholders::_2); 
+    pdeDomain.UpperBC = std::bind(&AnchorPde::BCUpper, &pde, std::placeholders::_1, std::placeholders::_2); 
+    pdeDomain.LowerBC = std::bind(&AnchorPde::BCLower, &pde, std::placeholders::_1, std::placeholders::_2);
+    pdeDomain.IC = std::bind(&AnchorPde::IC, &pde, std::placeholders::_1, std::placeholders::_2);
+}
 
 int main(int argc, char* argv[]) {
-    std::ofstream output("out.csv", std::ios::out);
-    Option myOption;
-    myOption.sig_ = 0.3; 
-    myOption.K_ = 65.0; 
-    myOption.T_ = 0.25;
-    myOption.r_ = 0.08; 
-    myOption.b_ = 0.08; 
-    myOption.beta_ = 1.0;
-    myOption.SMax_ = 325.0; 
-    myOption.type = OptionType::Call; 
+    double r = 0.049;
+    double T = 0.5;
+    double S = 100; 
+    double I = 100;
+    double lambda = 0.5;
+    double K = 100.;
+    double xMax = 1.0; // x far field
+    double yMax = 1.0; // y FF
+    double xHotSpot = 0.5; 
+    double yHotSpot = 0.5;
+    double scale1 = S * (1.0 - xHotSpot) / xHotSpot; 
+    double scale2 = I * (1.0 - yHotSpot) / yHotSpot;
+    // Values where price is calculated
+    // S/I == 1
+    // Define payoff as a lambda function 
+    // Type cp = Type::Put;
+    // if (cp == Type::Call){
+    auto payoff = [=](double S, double A)->double {return std::max(S - K, 0.0);};
+    // } else {
+    //     auto payoff = [=](double S, double I)->double {return std::max(K - S, 0.0);};
+    // }
 
-    BlackScholesPde myImp(myOption);
-    Range<double> rangeX(0.0, myOption.SMax_); 
-    Range<double> rangeT(0.0, myOption.T_);
-    IBvp currentImp(myImp, rangeX, rangeT);
+    AnchorPde anchorpde(scale1, scale2, r, lambda, K, T, xMax, yMax, payoff, Type::Call);
+    // Domain
+    TwoFactorPdeDomain<double> pdeDomain;
+    CreateAnchorPdeDomain(pdeDomain, anchorpde, xMax, yMax, T, payoff);
+    std::shared_ptr<TwoFactorAsianPde<double>> asianpde = CreateAsianPde();
 
-    long J = 500;
-    long N = 500;
-    std::cout << "Number of space divisions: ";
-    std::cout << J << std::endl;
-    std::cout << "Number of time divisions: ";
-    std::cout << N << std::endl;
+    long NX = 100; 
+    long NY = 100; 
+    long NT = 100;
 
-    CNIBVP fdmCN(currentImp, N, J);
+    std::vector<double> xmesh = pdeDomain.rx.mesh(NX); 
+    std::vector<double> ymesh = pdeDomain.ry.mesh(NY); 
+    std::vector<double> tmesh = pdeDomain.rt.mesh(NT);
+    std::cout << "Now creating solver\n";
+    TwoFactorAsianADESolver solver(pdeDomain, asianpde, xmesh, ymesh, tmesh);
+    solver.result();
 
-    auto vCN = OptionPrice(fdmCN);
-    auto sol = fdmCN.result(); 
-    auto xarr = fdmCN.XValues();
-
-    double h = rangeX.spread() / static_cast<double> (J);
-    std::vector<double> zarr(xarr.size() - 2); 
-    for (std::size_t j = 0; j < zarr.size(); ++j) {
-        zarr[j] = xarr[j + 1];
-    }
-
-    // Delta array: eq. (22.14) but centred difference variant 
-    std::vector<double> delta(zarr.size());
-
-    for (std::size_t j = 0; j < zarr.size(); ++j) {
-        delta[j] = (sol[j + 2] - sol[j]) / (2. * h); 
-    }
-    // Exact solution
-    // OptionCommand(double strike, double expiration,
-    // double riskFree, double costOfCarry, double volatility) 
-    CallDelta cDelta (myOption.K_, myOption.T_, myOption.r_, myOption.b_, myOption.sig_);
-    // PutDelta cDelta(myOption.K, myOption.T, myOption.r,
-    // myOption.b, myOption.sig);
-    std::vector<double> cDeltaPrices(zarr.size()); 
-    for (std::size_t j = 0; j < zarr.size(); ++j) {
-        cDeltaPrices[j] = cDelta.execute(zarr[j]); 
-    }
-    // Compute delta from cubic splines 
-    CubicSplineInterpolator csi2(xarr, sol, SecondDeriv); 
-    std::vector<double> splineDelta(zarr.size());
-    for (std::size_t j = 0; j < zarr.size(); ++j)
-    {
-        splineDelta[j] = csi2.Derivative(zarr[j]); 
-    }
-
-    std::vector<double> splineGamma(zarr.size()); 
-    for (std::size_t j = 0; j < zarr.size(); ++j) {
-        splineGamma[j] = std::get<2>(csi2.ExtendedSolve(zarr[j])); 
-    }
-    // CallGamma cGamma(myOption.K, myOption.T, myOption.r,
-    // myOption.b, myOption.sig);
-    CallGamma cGamma(myOption.K_, myOption.T_, myOption.r_, myOption.b_, myOption.sig_);
-    std::vector<double> cGammaPrices(zarr.size()); 
-    for (std::size_t j = 0; j < zarr.size(); ++j) {
-        cGammaPrices[j] = cGamma.execute(zarr[j]); 
-    }
-    // Gamma array: eq. (22.16) 
-    std::vector<double> gamma(zarr.size());
-    for (std::size_t j = 0; j < zarr.size(); ++j) {
-        gamma[j] = (sol[j + 2] - 2 * sol[j + 1] + sol[j]) / (h * h); 
-    }
-
-    for (size_t j = 0; j < zarr.size(); ++j) {
-        output << j << '\t' << cDeltaPrices[j] << '\t' << delta[j] << '\t' << splineDelta[j]
-                    << '\t' << cGammaPrices[j] << '\t' << gamma[j] << '\t' << splineGamma[j]
-                    << '\t' << sol[j]
-                    << std::endl;
-    }
-
-    output.close();
+    auto values = FindMeshValues(solver.xmesh, solver.ymesh, xHotSpot, yHotSpot);
+    std::cout << "MaxA, MaxB: " << std::get<0>(values) << ", " << std::get<1>(values) << std::endl;
     return 0;
 }

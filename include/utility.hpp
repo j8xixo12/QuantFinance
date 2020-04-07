@@ -4,6 +4,7 @@
 #include <vector>
 #include <cmath>
 #include <random>
+#include <algorithm>
 #include <boost/math/constants/constants.hpp>
 #include "Sde.hpp"
 #include "Fdm.hpp"
@@ -92,5 +93,24 @@ double Cdf(const double x) { // The approximation to the cumulative normal distr
 
 std::vector<double> OptionPrice(IBvpSolver& fdm) { // Compute option price using a FD scheme
     return fdm.result();
+}
+
+template <typename T> int sign(T val) {
+    return (T(0) < val) - (val < T(0));
+}
+
+std::tuple<std::size_t, std::size_t >
+      FindMeshValues(const std::vector<double>& xarr,
+                     const std::vector<double>& yarr,
+                     double x, double y) { 
+    // Compute indices by searching in an array xarr for a 'threshold'
+    // value x.
+    // Find position of first element in vector that satisfies // the predicate d >= x.
+    // Logarithmic complexity for random-access iterators
+    auto posA = std::upper_bound(xarr.begin(), xarr.end(), x); 
+    auto posB = std::upper_bound(yarr.begin(), yarr.end(), y);
+    auto maxA = std::distance(xarr.begin(), posA); 
+    auto maxB = std::distance(yarr.begin(), posB);
+    return std::make_tuple(maxA, maxB);
 }
 #endif // UTILITY_HPP_
