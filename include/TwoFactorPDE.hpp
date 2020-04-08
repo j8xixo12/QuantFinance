@@ -39,7 +39,7 @@ template <typename T> class TwoFactorPde {
         std::function<T (T,T,T)> d;
         std::function<T (T,T,T)> F;
         TwoFactorPde() = default;
-  };
+};
 
 template <typename T> class TwoFactorAsianPde : public std::enable_shared_from_this<TwoFactorAsianPde<T>> { 
     // Model a convection-diffusion-reaction PDE as a composition
@@ -78,7 +78,8 @@ class AnchorPde {
         double K;
         // Domain information
         double T;
-        double xMax, yMax;
+        double xMax;
+        double yMax;
         Function payoff;
         Type type;
 
@@ -167,7 +168,7 @@ class AnchorPde {
                 return 0.; // P
             } else {
                 double S = scale1 * xMax / (1 - xMax + 0.001); 
-                return S -K * std::exp(-r * t); // C
+                return S - K * std::exp(-r * t); // C
             }
         }
 };
@@ -184,11 +185,12 @@ class TwoFactorAsianADESolver {
         // Mesh-related data
         double hx, hy, delta_k, hx1, hy1, hx2, hy2;
         // Mesh-point values of coefficients
-        double A,B,C,D,E,F,G; 
-        double t2,tx1,ty1;
+        double A, D, E, F, G; 
+        // double B, C;  
+        double t2, tx1, ty1;
         // Other variables
         double tprev, tnow, T;
-        std::size_t NX, NY, NT;
+        // std::size_t NX, NY, NT;
 
         public:
             u::matrix<double> MatNew;
@@ -309,7 +311,7 @@ class TwoFactorAsianADESolver {
 
             }
 
-            void result() { 
+            u::matrix<double> result() { 
                 // The result of the calculation
                 std::cout << "result";
                 for (std::size_t n = 1; n < tmesh.size(); ++n) {
@@ -321,35 +323,15 @@ class TwoFactorAsianADESolver {
                     calculate(); // Calculate the solution at n+1
                     tprev = tnow;
                 }
+
+                return MatNew;
             }
 };
 
-std::shared_ptr<TwoFactorAsianPde<double>> CreateAsianPde() {
-    // Factory method to create an Asian pde for input to FDM
-    // Steps
-    // 1. Get input data
-    // 2. Create the components of the PDE // 3. Return the instance of AsianPde
-    double r = 0.049;
-    double T = 0.5;
-    // Values where price is calculated S/I == 1 
-    double S = 100.; 
-    double I = 100.;
-    double K = 110.;
-    double lambda = 0.5;
-        // Define payoff as a lambda function
-    double xMax = 1.0; // x far field 
-    double yMax = 1.0; // y FF
-    double xHotSpot = 0.5; 
-    double yHotSpot = 0.5; 
-    double scale1 = S * (1.0 - xHotSpot) / xHotSpot; 
-    double scale2 = I * (1.0 - yHotSpot) / yHotSpot;
-
-    // if (cp > 0) // Call
-    //     auto payoff = [=](double S, double A)->double {return std::max(S - K, 0.0);};
-    // else
-    auto payoff = [=](double S, double I)->double {return std::max(K - S, 0.0);};
-
-    AnchorPde anchorpde(scale1, scale2, r, lambda, K, T, xMax, yMax, payoff, Type::Call);
+std::shared_ptr<TwoFactorAsianPde<double>> CreateAsianPde(double r, double T, double S, double I,
+                                                            double K, double lambda, double xMax,
+                                                            double yMax, double xHotSpot, double yHotSpot,
+                                                            double scale1, double scale2, AnchorPde &anchorpde) {
 
     auto a11 = std::bind(&AnchorPde::a11, &anchorpde, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
     auto b1 = std::bind(&AnchorPde::b1, &anchorpde, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
@@ -361,4 +343,17 @@ std::shared_ptr<TwoFactorAsianPde<double>> CreateAsianPde() {
       (std::make_shared<TwoFactorAsianPde<double>>(a11, b1, b2, d, F));
 }
 
+void CreateAnchorPdeDomain(TwoFactorPdeDomain<double>& pdeDomain,
+                AnchorPde &pde,
+                double xMax, double yMax, double T,
+                const std::function<double(double, double)>& IC) {
+    pdeDomain.rx = Range<double>(0.0, xMax);
+    pdeDomain.ry = Range<double>(0.0, yMax);
+    pdeDomain.rt = Range<double>(0.0, T);
+    pdeDomain.LeftBC = std::bind(&AnchorPde::BCLeft, &pde, std::placeholders::_1, std::placeholders::_2); 
+    pdeDomain.RightBC = std::bind(&AnchorPde::BCRight, &pde, std::placeholders::_1, std::placeholders::_2); 
+    pdeDomain.UpperBC = std::bind(&AnchorPde::BCUpper, &pde, std::placeholders::_1, std::placeholders::_2); 
+    pdeDomain.LowerBC = std::bind(&AnchorPde::BCLower, &pde, std::placeholders::_1, std::placeholders::_2);
+    pdeDomain.IC = std::bind(&AnchorPde::IC, &pde, std::placeholders::_1, std::placeholders::_2);
+}
 #endif // TWOFACTOR_PDE_HPP_

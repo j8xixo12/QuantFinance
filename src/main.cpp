@@ -1,62 +1,88 @@
-#include <iostream>
-#include <functional>
-#include "TwoFactorPDE.hpp"
+#include <vector>
+#include <boost/numeric/odeint.hpp>
+#include <fstream>
+#include "BlackScholes.hpp"
 
-void CreateAnchorPdeDomain(TwoFactorPdeDomain<double>& pdeDomain,
-                AnchorPde &pde,
-                double xMax, double yMax, double T,
-                const std::function<double(double, double)>& IC) {
-    pdeDomain.rx = Range<double>(0.0, xMax);
-    pdeDomain.ry = Range<double>(0.0, yMax);
-    pdeDomain.rt = Range<double>(0.0, T);
-    pdeDomain.LeftBC = std::bind(&AnchorPde::BCLeft, &pde, std::placeholders::_1, std::placeholders::_2); 
-    pdeDomain.RightBC = std::bind(&AnchorPde::BCRight, &pde, std::placeholders::_1, std::placeholders::_2); 
-    pdeDomain.UpperBC = std::bind(&AnchorPde::BCUpper, &pde, std::placeholders::_1, std::placeholders::_2); 
-    pdeDomain.LowerBC = std::bind(&AnchorPde::BCLower, &pde, std::placeholders::_1, std::placeholders::_2);
-    pdeDomain.IC = std::bind(&AnchorPde::IC, &pde, std::placeholders::_1, std::placeholders::_2);
-}
+using value_type = double;
+typedef std::vector<value_type> state_type;
 
-int main(int argc, char* argv[]) {
-    double r = 0.049;
-    double T = 0.5;
-    double S = 100; 
-    double I = 100;
-    double lambda = 0.5;
-    double K = 100.;
-    double xMax = 1.0; // x far field
-    double yMax = 1.0; // y FF
-    double xHotSpot = 0.5; 
-    double yHotSpot = 0.5;
-    double scale1 = S * (1.0 - xHotSpot) / xHotSpot; 
-    double scale2 = I * (1.0 - yHotSpot) / yHotSpot;
-    // Values where price is calculated
-    // S/I == 1
-    // Define payoff as a lambda function 
-    // Type cp = Type::Put;
-    // if (cp == Type::Call){
-    auto payoff = [=](double S, double A)->double {return std::max(S - K, 0.0);};
-    // } else {
-    //     auto payoff = [=](double S, double I)->double {return std::max(K - S, 0.0);};
-    // }
+// Option Data
+value_type K = 50.0;
+value_type T = 0.5;
+value_type r = 0.08;
+value_type d = 0.0;
+value_type sig = 0.4;
 
-    AnchorPde anchorpde(scale1, scale2, r, lambda, K, T, xMax, yMax, payoff, Type::Call);
-    // Domain
-    TwoFactorPdeDomain<double> pdeDomain;
-    CreateAnchorPdeDomain(pdeDomain, anchorpde, xMax, yMax, T, payoff);
-    std::shared_ptr<TwoFactorAsianPde<double>> asianpde = CreateAsianPde();
+int main(int argc, char *argv[]) {
 
-    long NX = 100; 
-    long NY = 100; 
-    long NT = 100;
+    namespace Bode = boost::numeric::odeint;
+    // Input data
+    const value_type T_0 = 0.0; 
+    const value_type dt = 0.1;
+    const value_type A = 0.0;
+    value_type B = 1. * K;
+    const int NX = 50.0;
+    value_type h = (B - A) / static_cast<value_type>(NX);
 
-    std::vector<double> xmesh = pdeDomain.rx.mesh(NX); 
-    std::vector<double> ymesh = pdeDomain.ry.mesh(NY); 
-    std::vector<double> tmesh = pdeDomain.rt.mesh(NT);
-    std::cout << "Now creating solver\n";
-    TwoFactorAsianADESolver solver(pdeDomain, asianpde, xmesh, ymesh, tmesh);
-    solver.result();
+    // Functions
+    auto diffusion =  [&] (value_type x, value_type t) -> value_type { return 0.5 * sig * sig * x * x; }; 
+    auto convection = [&] (value_type x, value_type t) -> value_type { return (r - d) * x; }; 
+    auto reaction = [&] (value_type x, value_type t) -> value_type { return -r; };
 
-    auto values = FindMeshValues(solver.xmesh, solver.ymesh, xHotSpot, yHotSpot);
-    std::cout << "MaxA, MaxB: " << std::get<0>(values) << ", " << std::get<1>(values) << std::endl;
+    // BC
+    auto bcl = [&](value_type t) -> value_type { return K * std::exp(-(r - d) * t); };
+    auto bcr = [&](value_type t) -> value_type { return 0.; };
+    auto payoff = [&] (value_type x) -> value_type { return std::max<value_type>(K - x, 0.0); };
+
+    // For American options
+    auto penalty = [&] (value_type x, value_type u) -> value_type {
+        // The rationale is that if correction < 0 the
+        // constraint is satisfied and the penalty = 0.
+        // Otherise, we have to include a non-zero penalty
+
+        value_type correction = payoff(x) - u;
+
+        // Constraint already satisfied 
+        if (correction <= 0.0) return 0.0;
+
+        // A. (Courant) quadratic barrier function 
+        value_type lambda = 1e+12;
+        value_type penalty = lambda * correction * correction; 
+        return penalty;
+    };
+
+    // Initial condition; discretise IC
+    state_type U(NX + 1); // [0,J]
+    U[0] = bcl(0.0); 
+    U[U.size() - 1] = bcr(0.0); // Compatibility
+    value_type x = A + h;
+    for (std::size_t j = 1; j < U.size() - 1; ++j) {
+        U[j] = payoff(x); 
+        x += h;
+    }
+
+    // Integration_class
+    OdeBlackScholes ode(NX, h, diffusion, bcl, bcr, convection, reaction, penalty);
+    Bode::bulirsch_stoer<state_type, value_type> myStepper;
+    // Bode::runge_kutta_cash_karp54<state_type, value_type> myStepper;
+
+    std::ofstream output("out.csv", std::ios::out);
+    std::vector<double> mesh = ode.get_mesh();
+
+    auto write_out = [&] (const state_type& U, const value_type t ) {
+        if (std::fmod(t, 0.01) == 0) {
+            for (std::size_t i = 0; i < mesh.size(); ++i) {
+                output << t << " " << mesh[i] << " " << U[i] << std::endl;
+            }
+        }
+    };
+
+    std::size_t steps = Bode::integrate_adaptive (myStepper, ode, U, T_0, T, dt, write_out);
+    // std::cout << "Steps: " << steps << '\n';
+    // std::size_t steps = Bode::integrate(ode, U, T_0, T, dt, write_out); 
+    std::cout << "Steps: " << steps << '\n';
+
+    output.close();
+
     return 0;
 }
