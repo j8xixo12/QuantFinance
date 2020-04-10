@@ -1,88 +1,115 @@
-#include <vector>
-#include <boost/numeric/odeint.hpp>
-#include <fstream>
-#include "BlackScholes.hpp"
+#include <thread>
+#include <iostream>
+#include <chrono>
+#include "CRRLattice.hpp"
+#include "Lattice.hpp"
+#include "Option.hpp"
 
-using value_type = double;
-typedef std::vector<value_type> state_type;
+using namespace LatticeMechanism;
 
-// Option Data
-value_type K = 50.0;
-value_type T = 0.5;
-value_type r = 0.08;
-value_type d = 0.0;
-value_type sig = 0.4;
+auto elapsed(const std::chrono::steady_clock::time_point time1, const std::chrono::steady_clock::time_point time2) {
+    return std::chrono::duration_cast<std::chrono::seconds>(time2 - time1).count();
+}
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
+    std::cout << std::thread::hardware_concurrency() << " processors/cores detected." <<'\n';
+    Option opt;
+    opt.K_ = 65.0;
+    opt.T_ = 0.25;
+    opt.r_ = 0.08;
+    opt.sig_ = 0.3;
 
-    namespace Bode = boost::numeric::odeint;
-    // Input data
-    const value_type T_0 = 0.0; 
-    const value_type dt = 0.1;
-    const value_type A = 0.0;
-    value_type B = 1. * K;
-    const int NX = 50.0;
-    value_type h = (B - A) / static_cast<value_type>(NX);
+    int N = 7000;
 
-    // Functions
-    auto diffusion =  [&] (value_type x, value_type t) -> value_type { return 0.5 * sig * sig * x * x; }; 
-    auto convection = [&] (value_type x, value_type t) -> value_type { return (r - d) * x; }; 
-    auto reaction = [&] (value_type x, value_type t) -> value_type { return -r; };
+    double dt = opt.T_ / static_cast<double>(N);
+    std::cout << "Stress test, number of time steps: " << N << '\n';
 
-    // BC
-    auto bcl = [&](value_type t) -> value_type { return K * std::exp(-(r - d) * t); };
-    auto bcr = [&](value_type t) -> value_type { return 0.; };
-    auto payoff = [&] (value_type x) -> value_type { return std::max<value_type>(K - x, 0.0); };
+    CRRLatticeAlgorithms algo(opt, dt);
 
-    // For American options
-    auto penalty = [&] (value_type x, value_type u) -> value_type {
-        // The rationale is that if correction < 0 the
-        // constraint is satisfied and the penalty = 0.
-        // Otherise, we have to include a non-zero penalty
+    // Create basic asset lattice
+    Lattice<double, 2> asset(N, 0.0); // init
+    double rootVal = 60.0; // S(0) 
+    ForwardInduction<double, 2>(asset, algo, rootVal);
 
-        value_type correction = payoff(x) - u;
+    double K = opt.K_;
+    auto PutPayoff = [&K] (double S)-> double { return std::max<double>(K - S, 0.0); }; 
+    auto CallPayoff = [&K] (double S)-> double { return std::max<double>(S - K, 0.0); };
 
-        // Constraint already satisfied 
-        if (correction <= 0.0) return 0.0;
-
-        // A. (Courant) quadratic barrier function 
-        value_type lambda = 1e+12;
-        value_type penalty = lambda * correction * correction; 
-        return penalty;
+    // American early exercise constraint
+    auto AmericanPutAdjuster = [&PutPayoff](double& V, double S)->void { // e.g. early exercise
+        V = std::max<double>(V, PutPayoff(S));
+    };
+    auto AmericanCallAdjuster = [&CallPayoff](double& V, double S)->void { // e.g. early exercise
+        V = std::max<double>(V, CallPayoff(S));
+    };
+    auto EmptyAdjuster = [](double& V, double S)->void { // No action executed at a node
+        // Do nothing, no code generated in client code
     };
 
-    // Initial condition; discretise IC
-    state_type U(NX + 1); // [0,J]
-    U[0] = bcl(0.0); 
-    U[U.size() - 1] = bcr(0.0); // Compatibility
-    value_type x = A + h;
-    for (std::size_t j = 1; j < U.size() - 1; ++j) {
-        U[j] = payoff(x); 
-        x += h;
-    }
+    std::chrono::steady_clock::time_point time1 = std::chrono::steady_clock::now();
 
-    // Integration_class
-    OdeBlackScholes ode(NX, h, diffusion, bcl, bcr, convection, reaction, penalty);
-    Bode::bulirsch_stoer<state_type, value_type> myStepper;
-    // Bode::runge_kutta_cash_karp54<state_type, value_type> myStepper;
+    Lattice<double, 2> euroPut(N, 0.0); 
+    ForwardInduction<double, 2>(euroPut, algo, rootVal); 
+    Lattice<double, 2> euroCall(N, 0.0); 
+    ForwardInduction<double, 2>(euroCall, algo, rootVal); 
+    Lattice<double, 2> earlyPut(N, 0.0); 
+    ForwardInduction<double, 2>(earlyPut, algo, rootVal); 
+    Lattice<double, 2> earlyCall(N, 0.0); 
+    ForwardInduction<double, 2>(earlyCall, algo, rootVal);
 
-    std::ofstream output("out.csv", std::ios::out);
-    std::vector<double> mesh = ode.get_mesh();
+    double euroPutPrice = BackwardInduction<double>
+            (asset, euroPut, algo, PutPayoff, EmptyAdjuster);
+    std::cout << "Euro put: " << euroPutPrice << std::endl;
+    double euroCallPrice = BackwardInduction<double>
+              (asset, euroCall, algo, CallPayoff, EmptyAdjuster);
+    std::cout << "Euro call: " << euroCallPrice << std::endl;
 
-    auto write_out = [&] (const state_type& U, const value_type t ) {
-        if (std::fmod(t, 0.01) == 0) {
-            for (std::size_t i = 0; i < mesh.size(); ++i) {
-                output << t << " " << mesh[i] << " " << U[i] << std::endl;
-            }
-        }
+    // Price an early exercise option
+    double earlyPutPrice = BackwardInduction<double>
+           (asset, earlyPut, algo, PutPayoff,AmericanPutAdjuster);
+    std::cout << "Early put: " << earlyPutPrice << std::endl;
+    double earlyCallPrice = BackwardInduction<double>
+           (asset, earlyCall, algo, CallPayoff,AmericanCallAdjuster);
+    std::cout << "Early call: " << earlyCallPrice << std::endl;
+
+    std::chrono::steady_clock::time_point time2 = std::chrono::steady_clock::now();
+    std::cout << "Elapsed time sequential code: " << elapsed(time1, time2) << std::endl;
+
+    double Euro_put, Euro_call, Early_put, Early_call;
+    auto fn1 = [&]() {
+        ForwardInduction<double> (euroPut, algo, rootVal);
+        Euro_put = BackwardInduction<double> (asset, euroPut, algo, PutPayoff, EmptyAdjuster);
+    };
+    auto fn2 = [&]() {
+        ForwardInduction<double> (euroCall, algo, rootVal);
+        Euro_call = BackwardInduction<double> (asset, euroCall, algo, CallPayoff, EmptyAdjuster);
+    };
+    auto fn3 = [&]() {
+        ForwardInduction<double> (earlyPut, algo, rootVal);
+        Early_put = BackwardInduction<double> (asset, earlyPut, algo, PutPayoff, AmericanPutAdjuster);
+    };
+    auto fn4 = [&]() {
+        ForwardInduction<double> (earlyCall, algo, rootVal);
+        Early_call = BackwardInduction<double> (asset, earlyCall, algo, CallPayoff, AmericanCallAdjuster);
     };
 
-    std::size_t steps = Bode::integrate_adaptive (myStepper, ode, U, T_0, T, dt, write_out);
-    // std::cout << "Steps: " << steps << '\n';
-    // std::size_t steps = Bode::integrate(ode, U, T_0, T, dt, write_out); 
-    std::cout << "Steps: " << steps << '\n';
-
-    output.close();
+    time1 = std::chrono::steady_clock::now();
+    std::cout << '\n';
+    std::thread t1(fn1);
+    std::thread t2(fn2);
+    std::thread t3(fn3);
+    std::thread t4(fn4);
+    // No shared data so we define 1 barrier/rendezvous 
+    t1.join();
+    t2.join();
+    t3.join();
+    t4.join();
+    time2 = std::chrono::steady_clock::now();
+    std::cout << "Euro put: " << Euro_put << std::endl;
+    std::cout << "Euro call: " << Euro_call << std::endl;
+    std::cout << "Early put: " << Early_put << std::endl;
+    std::cout << "Early call: " << Early_call << std::endl;
+    std::cout << "Elapsed time C++11 threads in seconds: " << elapsed(time1, time2) << std::endl;
 
     return 0;
 }
