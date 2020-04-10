@@ -13,11 +13,11 @@ class Option {
 					beta_(0.0), SMax_(0.0) {};
 		explicit Option(const double r, const double sig, const double K,
 						const double T)
-						: r_(r), sig_(sig), K_(K), T_(T) {};
+						: r_(r), sig_(sig), K_(K), T_(T) {}
 		
 		explicit Option(const double K, const double T, const double r, const double sig,
 						const double b)
-						: r_(r), sig_(sig), K_(K), T_(T), b_(b) {};
+						: r_(r), sig_(sig), K_(K), T_(T), b_(b) {}
 		Option(const Option &other) : r_(other.r_), sig_(other.sig_), K_(other.K_), T_(other.T_), b_(other.b_),
 								q_(other.q_), D_(other.D_), beta_(other.beta_), SMax_(other.SMax_), type(other.type) {}
 
