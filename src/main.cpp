@@ -14,7 +14,7 @@ int main(int argc, char* argv[]) {
     opt.sig_ = 0.4;
     opt.r_  = 0.02;
 
-    std::ofstream output("out.csv", std::ios::out);
+    std::ofstream output("out.dat", std::ios::out);
 
     auto PutPayoff = [&opt] (double S)-> double {return std::max<double> (opt.K_ - S, 0.0);};
 
@@ -25,9 +25,9 @@ int main(int argc, char* argv[]) {
     double x;
     double VOld = S_0;
     double VNew;
-    long NT = 1000;
+    long NT = 3000;
     std::cout << "Number of time steps: " << NT << std::endl;
-    long NSIM = 50;
+    long NSIM = 50000;
     std::cout << "Number of simulations: " << NSIM << std::endl;
 
     std::vector<std::vector<double>> v_data(NT, std::vector<double>(NSIM, 0.0));
@@ -77,9 +77,9 @@ int main(int argc, char* argv[]) {
     }
 
     for (long index = 0; index < NT; ++index) {
-        output << index * dt << ",";
+        output << index * dt << " ";
         for (long i = 0; i < M; i++) {
-            output << v_data[index][i] << ","; 
+            output << v_data[index][i] << " "; 
         }
         output << std::endl;
     }
