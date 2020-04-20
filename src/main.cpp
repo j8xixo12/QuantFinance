@@ -1,97 +1,59 @@
 #include <iostream>
-#include <memory>
 #include <random>
+#include <memory>
 #include <fstream>
-#include "SdeFactory.hpp"
-#include "Option.hpp"
-
+#include "RNGenerator.hpp"
+#include "Sde.hpp"
+#include "Pricer.hpp"
+#include "SUD.hpp"
+#include "FdmEuler.hpp"
 
 int main(int argc, char* argv[]) {
+    int NSim = 50;
+    int NT = 500;
+    double driftCoefficient = 0.08;
+    double diffusionCoefficient = 0.3;
+    double dividendYield = 0.0; 
+    double initialCondition = 60.0; 
+    double expiry = 0.25;
 
-    Option opt;
-    opt.K_ = 65.0;
-    opt.T_ = 1.0;
-    opt.sig_ = 0.4;
-    opt.r_  = 0.02;
+    auto sde = std::shared_ptr<GBM<double>> (std::make_shared<GBM<double>>(driftCoefficient, 
+                                                diffusionCoefficient,
+                                                dividendYield,
+                                                initialCondition,
+                                                expiry));
+    
+    double K = 65.0;
+    // Factories for objects in context diagram
+    std::function<double(double)> payoffPut = [&K](double x) {return std::max<double>(0.0, K - x); }; 
+    std::function<double(double)> payoffCall = [&K](double x) {return std::max<double>(0.0, x - K); }; 
+
+    double r = 0.08; 
+    double T = 0.25;
+
+    std::function<double()> discounter = [&r, &T]() { return std::exp(-r * T); };
+    auto pricerCall = std::shared_ptr<EuropeanPricer> (std::make_shared<EuropeanPricer>(payoffCall, discounter));
+    auto pricerPut = std::shared_ptr<EuropeanPricer> (std::make_shared<EuropeanPricer>(payoffPut, discounter));
+    auto fdm = std::shared_ptr<EulerFdm<GBM<double>>> (std::make_shared<EulerFdm<GBM<double>>>(sde, NT));
+    auto rngPM = std::shared_ptr<PolarMarsaglia<double, std::uniform_real_distribution>>
+                    (std::make_shared<PolarMarsaglia<double, std::uniform_real_distribution>>(0.0, 1.0));
+    
+    SUD<GBM<double>, EuropeanPricer, EulerFdm<GBM<double>>, PolarMarsaglia<double, std::uniform_real_distribution>>
+        s(sde, pricerPut, fdm, rngPM, NSim, NT);
+
+    s.start();
+
+    auto res = s.result();
 
     std::ofstream output("out.dat", std::ios::out);
 
-    auto PutPayoff = [&opt] (double S)-> double {return std::max<double> (opt.K_ - S, 0.0);};
-
-
-    double S_0 = 60.0;
-    std::shared_ptr<Sde<double>> sde_ptr = SdeFactory<double>::GetSde(opt, S_0, SdeType::GBM);
-    
-    double x;
-    double VOld = S_0;
-    double VNew;
-    long NT = 3000;
-    std::cout << "Number of time steps: " << NT << std::endl;
-    long NSIM = 50000;
-    std::cout << "Number of simulations: " << NSIM << std::endl;
-
-    std::vector<std::vector<double>> v_data(NT, std::vector<double>(NSIM, 0.0));
-
-    double M = static_cast<double>(NSIM);
-    double dt = opt.T_ / static_cast<double> (NT); 
-    double sqrdt = std::sqrt(dt);
-
-    // Normal random number
-    double dW;
-    double price = 0.0; // Option price 
-    double payoffT;
-    double avgPayoffT = 0.0;
-    double squaredPayoff = 0.0;
-    double sumPriceT = 0.0;
-    // Normal (0,1) rng
-    std::default_random_engine dre; 
-    std::normal_distribution<double> nor(0.0, 1.0);
-    // Create a random number
-    dW = nor(dre);
-    long coun = 0; // Number of times S hits origin
-    
-    for (long i = 0; i < M; ++i) {
-        if ((i / 100'00) * 100'00 == i) {// Give status after each 10000th iteration
-            std::cout << i << std::endl;
-        }
-
-        VOld = S_0;
-        x = 0.0;
-
-        for (long index = 0; index < NT; ++index) {
-            // Create a random number
-            dW = nor(dre);
-            // The FDM (in this case explicit Euler) 
-            VNew = VOld + (dt * sde_ptr->drift(x, VOld))
-                    + (sqrdt * sde_ptr->diffusion(x, VOld) * dW);
-            VOld = VNew;
-            x += dt;
-            v_data[index][i] = VNew;
-        }
-
-        payoffT = PutPayoff(VNew); 
-        sumPriceT += payoffT;
-        avgPayoffT += payoffT / M;
-        avgPayoffT *= avgPayoffT;
-        squaredPayoff += (payoffT * payoffT);
-    }
-
-    for (long index = 0; index < NT; ++index) {
-        output << index * dt << " ";
-        for (long i = 0; i < M; i++) {
-            output << v_data[index][i] << " "; 
+    for (std::size_t i = 0; i < res[0].size(); ++i) {
+        output << fdm->x[i] << ", ";
+        for (std::size_t j = 0; j < res.size(); ++j) {
+            output << res[j][i] << ", ";
         }
         output << std::endl;
     }
-    
-    output.close();
-    // Finally, discounting the average price
-    price = std::exp(-opt.r_ * opt.T_) * sumPriceT / M;
-    std::cout << "Price, after discounting: " << price << ", " << std::endl;
-    double SD = std::sqrt((squaredPayoff / M) - sumPriceT * sumPriceT / (M * M));
-    std::cout << "Standard Deviation: " << SD << ", " << std::endl;
-    double SE = SD / std::sqrt(M);
-    std::cout << "Standard Error: " << SE << ", " << std::endl;
 
     return 0;
 }

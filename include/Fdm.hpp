@@ -12,6 +12,7 @@ template<class Derived, typename T> class Fdm {
         std::shared_ptr<Sde<T>> sde;
 
     public:
+        Fdm() {}
         Fdm(const std::shared_ptr<Sde<T>>& oneFactorProcess,
             const std::normal_distribution<T>& normalDist,
             const std::default_random_engine& engine)

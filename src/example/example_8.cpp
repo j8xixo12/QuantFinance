@@ -8,12 +8,12 @@ int main(int argc, char* argv[]) {
     // Generate list and vector of uniform <int> and <double>
     double A = 0; 
     double B = 1.0;
-    RNGenerator<double, std::uniform_real_distribution, std::vector> rng(A, B); 
+    RNGenerator<double, std::uniform_real_distribution> rng(A, B); 
     std::cout << rng() << '\n';
     std::cout << generateRN(A, B) << '\n';
     int a = 1; 
     int b = 6;
-    RNGenerator<int, std::uniform_int_distribution, std::list> rng2(a,b); 
+    RNGenerator<int, std::uniform_int_distribution> rng2(a,b); 
     std::cout << rng2() << '\n';
     // std::size_t N = 7;
     // auto vec = rng.RandomArray(N); 
