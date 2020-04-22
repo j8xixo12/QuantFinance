@@ -6,13 +6,14 @@
 #include "Fdm.hpp"
 #include "Pricer.hpp"
 
-template <typename Sde, typename Pricer, typename Fdm, typename RNGenerator>
-class SUD : private Sde, private Pricer, private Fdm, private RNGenerator { // System under discussion
+template <typename T, template<class TT> typename Sde, typename Pricer, 
+            template<class TTT> typename Fdm, typename RNGenerator>
+class SUD : private Sde<T>, private Pricer, private Fdm<Sde<T>>, private RNGenerator { // System under discussion
     private:
         // Four main components
-        std::shared_ptr<Sde> sde;
+        std::shared_ptr<Sde<T>> sde;
         std::shared_ptr<Pricer> pricer;
-        std::shared_ptr<Fdm> fdm;
+        std::shared_ptr<Fdm<Sde<T>>> fdm;
         std::shared_ptr<RNGenerator> rng;
 
         int NSim;
@@ -20,9 +21,9 @@ class SUD : private Sde, private Pricer, private Fdm, private RNGenerator { // S
     public:
         SUD() {}
         // Generated path per simulation
-        SUD(const std::shared_ptr<Sde>& s,
+        SUD(const std::shared_ptr<Sde<T>>& s,
             const std::shared_ptr<Pricer>& p,
-            const std::shared_ptr<Fdm>& f,
+            const std::shared_ptr<Fdm<Sde<T>>>& f,
             const std::shared_ptr<RNGenerator>& r,
             int numberSimulations, int NT)
             : sde(s), pricer(p), fdm(f), rng(r) {

@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
     auto rngPM = std::shared_ptr<PolarMarsaglia<double, std::uniform_real_distribution>>
                     (std::make_shared<PolarMarsaglia<double, std::uniform_real_distribution>>(0.0, 1.0));
     
-    SUD<GBM<double>, EuropeanPricer, EulerFdm<GBM<double>>, PolarMarsaglia<double, std::uniform_real_distribution>>
+    SUD<double, GBM, EuropeanPricer, EulerFdm, PolarMarsaglia<double, std::uniform_real_distribution>>
         s(sde, pricerPut, fdm, rngPM, NSim, NT);
 
     s.start();
