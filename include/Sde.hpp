@@ -13,46 +13,45 @@ template <typename T = double> class Sde {
     protected:
         FunctionType<T> dr_;
         FunctionType<T> diff_;
+        T mu; // Drift
+        T vol; // Constant volatility
+        T d; // Constant dividend yield
+        T ic; // Initial condition
+        T exp; // Expiry
     public:
-        T ic;
-        T B; // SDE on interval [0,B]
         Sde() {};
         Sde(const FunctionType<T>& drift, const FunctionType<T>& diffusion,
-            const T& initialcCondition, const T& expiration)
-            : dr_(drift), diff_(diffusion), ic(initialcCondition),
-            B(expiration) {}
-        Sde(const Sde<T>& sde2, const T& initialcCondition, const
-        T& expiration)
-            : dr_(sde2.dr_), diff_(sde2.diff_), ic(initialcCondition),
-            B(expiration) {}
-        Sde(const ISde<T>& functions, const T& initialcCondition, const T& expiration)
-            : dr_(std::get<0>(functions)), diff_(std::get<1>(functions)),
-                ic(initialcCondition), B(expiration) {}
+            const Option&opt, const T& initialcCondition)
+            : dr_(drift), diff_(diffusion), mu(opt.r_), vol(opt.sig_), 
+            d(opt.D_), ic(initialcCondition), exp(opt.T_) {}
+        Sde(const Sde<T>& sde2)
+            : dr_(sde2.dr_), diff_(sde2.diff_), mu(sde2.mu), vol(sde2.vol), 
+            d(sde2.d), ic(sde2.ic), exp(sde2.exp) {}
+
+        virtual ~Sde() {};
+
         T drift(const T& S, const T& t) const { return dr_(S, t); }
         T diffusion(const T& S, const T& t) const { return diff_(S, t); }
+
+        T Expiry() { return exp; }
+        T InitialCondition() { return ic; }
 };
 
-template<typename T = double> class GBM : public Sde<T> {
-    private:
-        double mu; // Drift
-        double vol; // Constant volatility
-        double d; // Constant dividend yield
-        double ic; // Initial condition
-        double exp; // Expiry
-    
+template<typename T = double> class GBMSDE : public Sde<T> {    
     public:
-        GBM() {};
-        GBM(double driftCoefficient, double diffusionCoefficient,
-            double dividendYield, double initialCondition,
-            double expiry) {
-                mu = driftCoefficient;
-                vol = diffusionCoefficient;
-                d = dividendYield;
-                ic = initialCondition;
-                exp = expiry;
+        GBMSDE() {};
+        virtual ~GBMSDE() {};
+        GBMSDE(T driftCoefficient, T diffusionCoefficient,
+            T dividendYield, T initialCondition,
+            T expiry) {
+                this->mu = driftCoefficient;
+                this->vol = diffusionCoefficient;
+                this->d = dividendYield;
+                this->ic = initialCondition;
+                this->exp = expiry;
 
-                auto dr = [&] (double x, double t) -> double { return (mu - d) * x;};
-                auto diff = [&] (double x, double t) -> double { return vol * x;};
+                auto dr = [&] (T x, T t) -> T { return (this->mu - this->d) * x;};
+                auto diff = [&] (T x, T t) -> T { return this->vol * x;};
 
                 FunctionType<T> dr_fp = dr;
                 FunctionType<T> diff_fp = diff;
@@ -61,18 +60,40 @@ template<typename T = double> class GBM : public Sde<T> {
                 this->diff_ = diff_fp;
         }
 
-        double Expiry() { return exp; }
-        double InitialCondition() { return ic; }
-
-        GBM(Option &opt, double initialCondition) {
-            mu = opt.r_;
-            vol = opt.sig_;
-            d = opt.D_;
-            ic = initialCondition;
-            exp = opt.T_;
+        GBMSDE(const Option &opt, T initialCondition) {
+            this->mu = opt.r_;
+            this->vol = opt.sig_;
+            this->d = opt.D_;
+            this->ic = initialCondition;
+            this->exp = opt.T_;
             
-            auto dr = [&] (double x, double t) -> double { return (mu - d) * x;};
-            auto diff = [&] (double x, double t) -> double { return vol * x;};
+            auto dr = [&] (T x, T t) -> T { return (this->mu - this->d) * x;};
+            auto diff = [&] (T x, T t) -> T { return this->vol * x;};
+
+            FunctionType<T> dr_fp = dr;
+            FunctionType<T> diff_fp = diff;
+
+            this->dr_ = dr_fp;
+            this->diff_ = diff_fp;
+        }
+};
+
+template<typename T = double> class CEVSDE : public Sde<T> {    
+    private:
+        T Beta;
+    public:
+        CEVSDE() {};
+
+        CEVSDE(const Option &opt, T initialCondition, T beta_in) {
+            this->mu = opt.r_;
+            this->vol = opt.sig_;
+            this->d = opt.D_;
+            this->ic = initialCondition;
+            this->exp = opt.T_;
+            this->Beta = beta_in;
+            
+            auto dr = [&](T x, T t) { return this->mu * std::pow(x, Beta); }; 
+            auto diff = [&](T x, T t) { return this->vol * x; };
 
             FunctionType<T> dr_fp = dr;
             FunctionType<T> diff_fp = diff;

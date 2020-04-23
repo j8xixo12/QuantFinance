@@ -8,12 +8,12 @@
 
 template <typename T, template<class TT> typename Sde, typename Pricer, 
             template<class TTT> typename Fdm, typename RNGenerator>
-class SUD : private Sde<T>, private Pricer, private Fdm<Sde<T>>, private RNGenerator { // System under discussion
+class SUD : private Sde<T>, private Pricer, private Fdm<T>, private RNGenerator { // System under discussion
     private:
         // Four main components
         std::shared_ptr<Sde<T>> sde;
         std::shared_ptr<Pricer> pricer;
-        std::shared_ptr<Fdm<Sde<T>>> fdm;
+        std::shared_ptr<Fdm<T>> fdm;
         std::shared_ptr<RNGenerator> rng;
 
         int NSim;
@@ -23,7 +23,7 @@ class SUD : private Sde<T>, private Pricer, private Fdm<Sde<T>>, private RNGener
         // Generated path per simulation
         SUD(const std::shared_ptr<Sde<T>>& s,
             const std::shared_ptr<Pricer>& p,
-            const std::shared_ptr<Fdm<Sde<T>>>& f,
+            const std::shared_ptr<Fdm<T>>& f,
             const std::shared_ptr<RNGenerator>& r,
             int numberSimulations, int NT)
             : sde(s), pricer(p), fdm(f), rng(r) {

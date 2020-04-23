@@ -22,9 +22,9 @@ class FdmEuler : public Fdm<FdmEuler<T>, T> {
 };
 
 
-template <typename Sde> class EulerFdm { 
+template <typename T> class EulerFdm { 
     private:
-        std::shared_ptr<Sde> sde;
+        std::shared_ptr<Sde<T>> sde;
         int NT;
     public:
         std::vector<double> x;
@@ -33,7 +33,7 @@ template <typename Sde> class EulerFdm {
     // The mesh array
     // Mesh size
     EulerFdm() = default;
-    EulerFdm(const std::shared_ptr<Sde>& stochasticEquation, int numSubdivisions)
+    EulerFdm(const std::shared_ptr<Sde<T>>& stochasticEquation, int numSubdivisions)
     : sde(stochasticEquation), NT(numSubdivisions) {
         NT = numSubdivisions;
         k = sde->Expiry() / static_cast<double>(NT); 
