@@ -5,27 +5,23 @@
 #include <memory>
 #include "Sde.hpp"
 
-template<class Derived, typename T> class Fdm {
+template<typename T> class Fdm {
     protected:
-        std::normal_distribution<T> dist;
-        std::default_random_engine eng;
         std::shared_ptr<Sde<T>> sde;
+        int NT;
 
     public:
+        std::vector<T> x;
+        T dt;
+        T dtSqrt;
+
         Fdm() {}
-        Fdm(const std::shared_ptr<Sde<T>>& oneFactorProcess,
-            const std::normal_distribution<T>& normalDist,
-            const std::default_random_engine& engine)
-        : dist(normalDist), eng(engine), sde(oneFactorProcess) {}
+        virtual ~Fdm() {};
+        Fdm(const std::shared_ptr<Sde<T>>& oneFactorProcess)
+        : sde(oneFactorProcess), NT(0), dt(0.0), dtSqrt(0.0) {}
 
         // Compute x(t_n + dt) in terms of x(t_n)
-        T advance(T xn, double tn, double dt) {
-            return static_cast<Derived*> (this)->advance(xn, tn, dt); 
-        }
-
-        T generateRN() {
-            return dist(eng);
-        }
+        virtual T advance(T xn, T tn, T dt, T normalVar) const = 0;
 };
 
 #endif // FDM_HPP_

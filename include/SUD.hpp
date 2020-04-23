@@ -7,13 +7,13 @@
 #include "Pricer.hpp"
 
 template <typename T, template<class TT> typename Sde, typename Pricer, 
-            template<class TTT> typename Fdm, typename RNGenerator>
-class SUD : private Sde<T>, private Pricer, private Fdm<T>, private RNGenerator { // System under discussion
+            template<class TTT> typename FDM, typename RNGenerator>
+class SUD : private Sde<T>, private Pricer, private FDM<T>, private RNGenerator { // System under discussion
     private:
         // Four main components
         std::shared_ptr<Sde<T>> sde;
         std::shared_ptr<Pricer> pricer;
-        std::shared_ptr<Fdm<T>> fdm;
+        std::shared_ptr<FDM<T>> fdm;
         std::shared_ptr<RNGenerator> rng;
 
         int NSim;
@@ -23,7 +23,7 @@ class SUD : private Sde<T>, private Pricer, private Fdm<T>, private RNGenerator 
         // Generated path per simulation
         SUD(const std::shared_ptr<Sde<T>>& s,
             const std::shared_ptr<Pricer>& p,
-            const std::shared_ptr<Fdm<T>>& f,
+            const std::shared_ptr<FDM<T>>& f,
             const std::shared_ptr<RNGenerator>& r,
             int numberSimulations, int NT)
             : sde(s), pricer(p), fdm(f), rng(r) {
@@ -41,7 +41,7 @@ class SUD : private Sde<T>, private Pricer, private Fdm<T>, private RNGenerator 
                 VOld = sde->InitialCondition(); 
                 res[i][0] = VOld; 
                 for (std::size_t n = 1; n < res[i].size(); n++) {
-                    VNew = fdm->advance(VOld, fdm->x[n - 1], fdm->k, (*rng)());
+                    VNew = fdm->advance(VOld, fdm->x[n - 1], fdm->dt, (*rng)());
                     res[i][n] = VNew; 
                     VOld = VNew;
                 }
