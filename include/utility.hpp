@@ -108,22 +108,26 @@ T mean(std::vector<T> &x) {
 }
 
 template<typename T>
-std::vector<T> ACF(std::vector<T> &x) {
+std::vector<T> ACF(std::vector<T> &x, const int &lag) {
     T Mean = mean(x);
-    std::vector<T> ret(x.size(), 0.0);
+    std::vector<T> ret(lag, 0.0);
 
     T n = 0.0;
-    T d = 0.0;
+    T variance = 0.0;
     T x_i = 0.0;
+
+    for (auto i = 0; i < x.size(); ++i) {
+        variance += (x[i] - Mean) * (x[i] - Mean);
+    }
+    int temp = 0;
     for (auto i = 0; i < ret.size(); ++i) {
         n = 0.0;
-        d = 0.0;
-        for (auto j = 0; j < x.size(); ++j) {
+        for (auto j = 0; j < x.size() - temp; ++j) {
             x_i = x[j] - Mean;
             n += (x_i * (x[(j + i) % x.size()] - Mean));
-            d += x_i * x_i;
         }
-        ret[i] = n / d;
+        ret[i] = n / variance;
+        temp++;
     }
     return ret;
 }
