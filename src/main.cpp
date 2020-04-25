@@ -10,10 +10,11 @@
 #include "FdmEuler.hpp"
 #include "FdmHeun.hpp"
 #include "Option.hpp"
+#include "utility.hpp"
 
 int main(int argc, char* argv[]) {
-    int NSim = 50;
-    int NT = 1000;
+    int NSim = 1;
+    int NT = 3650;
     Option opt;
     opt.r_ = 0.08;
     opt.sig_ = 0.3;
@@ -46,6 +47,12 @@ int main(int argc, char* argv[]) {
     auto res = s.result();
 
     std::ofstream output("out.dat", std::ios::out);
+    std::ofstream output2("out2.dat", std::ios::out);
+
+    auto vec = MA(res[1], 70);
+    res.push_back(std::move(vec));
+    vec = MA(res[1], 304);
+    res.push_back(std::move(vec));
 
     for (std::size_t i = 0; i < res[0].size(); ++i) {
         output << fdm->x[i] << ", ";
@@ -54,6 +61,15 @@ int main(int argc, char* argv[]) {
         }
         output << std::endl;
     }
+
+    auto temp = ACF(res[1]);
+
+    for (std::size_t i = 0; i < res[0].size(); ++i) {
+        output2 << i << ", " << temp[i] << std::endl;
+    }
+
+    output.close();
+    output2.close();
 
     return 0;
 }

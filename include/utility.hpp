@@ -46,23 +46,6 @@ std::vector<double> CreateRefinedMesh(const std::vector<double> &mesh) {
     return x;
 }
 
-// Creating a path of an SDE approximated by FDM
-template <class Derived, typename T = double>
-std::vector<T> Path(const Sde<T>& sde,
-                  Fdm<Derived, T>& fdm,
-                  long NT) {
-    std::vector<T> result(NT + 1);
-    result[0] = sde.ic;
-    double dt = sde.B / static_cast<T>(NT); 
-    double tn = dt;
-    for (std::size_t n = 1; n < result.size(); ++n) {
-        result[n] = fdm.advance(result[n - 1], tn, dt);
-        tn += dt; 
-    }
-    return result;
-}
-
-
 double N(double x) { 
     // aka CdfN(x)
     return 0.5 * std::erfc(-x / std::sqrt(2.0));
@@ -112,5 +95,55 @@ std::tuple<std::size_t, std::size_t >
     auto maxA = std::distance(xarr.begin(), posA); 
     auto maxB = std::distance(yarr.begin(), posB);
     return std::make_tuple(maxA, maxB);
+}
+
+template<typename T>
+T mean(std::vector<T> &x) {
+    auto n = x.size();
+    T sum = 0.0;
+    for (const auto &i : x) {
+        sum += i;
+    }
+    return sum / static_cast<double>(n);
+}
+
+template<typename T>
+std::vector<T> ACF(std::vector<T> &x) {
+    T Mean = mean(x);
+    std::vector<T> ret(x.size(), 0.0);
+
+    T n = 0.0;
+    T d = 0.0;
+    T x_i = 0.0;
+    for (auto i = 0; i < ret.size(); ++i) {
+        n = 0.0;
+        d = 0.0;
+        for (auto j = 0; j < x.size(); ++j) {
+            x_i = x[j] - Mean;
+            n += (x_i * (x[(j + i) % x.size()] - Mean));
+            d += x_i * x_i;
+        }
+        ret[i] = n / d;
+    }
+    return ret;
+}
+
+template<typename T>
+std::vector<T> MA(std::vector<T> &x, const int &span) {
+    std::vector<T> ret(x.size(), 0.0);
+    auto sum = 0.0;
+    for (std::size_t i = 0; i < span; ++i) {
+        sum += x[i];
+        ret[i] = sum / span;
+    }
+    sum = 0.0;
+    for (std::size_t i = span - 1; i < x.size(); ++i) {
+        for (std::size_t j = 0; j < span; ++j) {
+            sum += x[i - j];
+        }
+        ret[i] = sum / span;
+        sum = 0.0;
+    }
+    return ret;
 }
 #endif // UTILITY_HPP_
