@@ -112,21 +112,23 @@ std::vector<T> ACF(std::vector<T> &x, const int &lag) {
     T Mean = mean(x);
     std::vector<T> ret(lag, 0.0);
 
+    auto N = x.size();
     T n = 0.0;
     T variance = 0.0;
     T x_i = 0.0;
 
-    for (auto i = 0; i < x.size(); ++i) {
+    for (auto i = 0; i < N; ++i) {
         variance += (x[i] - Mean) * (x[i] - Mean);
     }
+    variance = variance / N;
     int temp = 0;
-    for (auto i = 0; i < ret.size(); ++i) {
+    for (auto i = 0; i <= ret.size(); ++i) {
         n = 0.0;
-        for (auto j = 0; j < x.size() - temp; ++j) {
+        for (auto j = 0; j < N - temp; ++j) {
             x_i = x[j] - Mean;
-            n += (x_i * (x[(j + i) % x.size()] - Mean));
+            n += (x_i * (x[(j + i) % N] - Mean));
         }
-        ret[i] = n / variance;
+        ret[i] = n / variance / (N - temp);
         temp++;
     }
     return ret;
