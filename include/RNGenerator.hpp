@@ -10,12 +10,12 @@ template<typename T, template<typename TT> class Dist>
 class RNGenerator {
     protected:
         Dist<T> dist;
-        std::default_random_engine eng;
+        std::mt19937_64 eng;
 
     public:
         RNGenerator() = default;
         template <typename... Args> RNGenerator(Args... args)
-        : dist (Dist<T>(args...)), eng(std::default_random_engine()) {
+        : dist (Dist<T>(args...)), eng(std::mt19937_64()) {
             // Hard-coded 
             std::random_device rd; 
             eng.seed(rd());
@@ -23,7 +23,7 @@ class RNGenerator {
 
         template<typename T2> RNGenerator(const std::initializer_list<T2>&
                                         initList)
-        : dist(initList), eng(std::default_random_engine()) {
+        : dist(initList), eng(std::mt19937_64()) {
             // Hard-coded 
             std::random_device rd; 
             eng.seed(rd());
