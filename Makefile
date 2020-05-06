@@ -5,6 +5,7 @@ OUT = build
 EXEC = main
 
 CXXFLAGS = -Iinclude -Wall -g -std=c++17
+LDFLAGS = -larmadillo
 
 .PHONY: run obj clean distclean
 

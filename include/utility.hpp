@@ -151,4 +151,45 @@ std::vector<T> MA(std::vector<T> &x, const int &span) {
     }
     return ret;
 }
+
+template<typename T>
+std::tuple<T, T> OLS(std::vector<T> &y, std::vector<T> &x) {
+    T beta = 0.0;
+    T MeanX = mean(x);
+    T MeanY = mean(y);
+    auto n = x.size();
+    auto numer = 0.0;
+    auto den = 0.0;
+    for (auto i = 0; i < n; ++i) {
+        numer += (x[i] - MeanX) * (y[i] - MeanY);
+        den += (x[i] - MeanX) * (x[i] - MeanX);
+    }
+
+    beta = numer / den;
+    auto alpha = MeanY - beta * MeanX;
+
+    return std::make_tuple(alpha, beta);
+}
+
+template<typename T>
+T RSS(std::vector<T> &y, std::vector<T> &x, std::function<T (T)> f) {
+    T sum = 0.0;
+    for (auto i = 0; i < x.size(); ++i) {
+        sum+= (y[i] - f(x[i])) * (y[i] - f(x[i]));
+    }
+    return sum;
+}
+
+// template<typename T>
+// int AIC(const std::vector<T> &x, const int &maxlag) {
+//     auto lagvec = ACF(x, maxlag);
+//     auto temp1 = x; // y
+//     auto temp2 = x; // x
+
+//     for (auto i = 0; i < maxlag; ++i) {
+//         temp1.erase(temp1.begin());
+//         temp2.pop_back();
+//     }
+
+// }
 #endif // UTILITY_HPP_
