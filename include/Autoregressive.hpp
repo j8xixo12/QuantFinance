@@ -42,7 +42,7 @@ class AR {
                 lhs(i) = R(i + 1);
             }
 
-            // lhs.print();
+            R.print();
 
             for (auto i = 0; i < NumOrder; ++i) {
                 for (auto j = i + 1; j < NumOrder; ++j) {
