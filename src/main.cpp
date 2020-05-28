@@ -19,15 +19,15 @@ Rcpp::NumericVector acfc(Rcpp::NumericVector x, bool plot = true, int lagmax = 1
     Rcpp::Function ri = stats["acf"];
     Rcpp::Function na_pass = stats["na.pass"];
     Rcpp::List result = ri(x, lagmax, "correlation", plot, na_pass);
-    Rcpp::NumericVector res = result["acf"];
-    return res;
+    // Rcpp::NumericVector res = result["acf"];
+    return result["acf"];
 }
 
 int main(int argc, char* argv[]) {
 
     int maxlag = 20;
     int NSim = 1;
-    int NT = 315360;
+    int NT = 31536;
     Option opt;
     opt.r_ = 0.08;
     opt.sig_ = 0.3;
